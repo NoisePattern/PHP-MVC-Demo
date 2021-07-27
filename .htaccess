@@ -1,0 +1,6 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+	RewriteEngine on
+	RewriteCond %{REQUEST_URI} !www/
+	RewriteRule (.*) www/ [L]
+</IfModule>
