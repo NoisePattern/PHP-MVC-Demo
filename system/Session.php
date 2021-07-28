@@ -60,6 +60,16 @@ class Session {
 	}
 
 	/**
+	 * Unsets a key.
+	 *
+	 * @param string $keys An array containing names of keys to unset.
+	 */
+	public static function unsetKey($keys){
+		foreach($keys as $key){
+			unset($_SESSION[$key]);
+		}
+	}
+	/**
 	 * Sets flash message to queue.
 	 *
 	 * @param string $type Type of flash message, either 'success' or 'error'.

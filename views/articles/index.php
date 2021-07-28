@@ -8,7 +8,12 @@ foreach($articles as $article){
 		echo ', edited on ' . date('j.n.Y H:i', strtotime($article['updated']));
 	}
 	echo '</p>';
-	echo html_entity_decode($article['content']);
+	$content = html_entity_decode($article['content']);
+	$cut = stripos($content, '</p>');
+	if($cut){
+		$content = substr($content, 0, $cut + 4);
+	}
+	echo $content;
 	echo '<p><a href="' . URLROOT . '/articles/article?article_id=' . $article['article_id'] . '">Read more</a></p>';
 }
 if(sizeof($articles) == 0){

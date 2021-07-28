@@ -19,6 +19,7 @@
 	require_once(SYSTEMROOT . 'Auth.php');
 	require_once(SYSTEMROOT . 'Controller.php');
 	require_once(SYSTEMROOT . 'Model.php');
+	require_once(SYSTEMROOT . 'Request.php');
 
 	// Instantiate core.
 	$app = new Application();

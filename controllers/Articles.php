@@ -16,6 +16,9 @@ class Articles extends Controller {
 		'admin' => [
 			'setting' => ['level' => [2]]
 		],
+		'myarticles' => [
+			'login' => true
+		],
 		'write' => [
 			'login' => true
 		],
@@ -44,23 +47,24 @@ class Articles extends Controller {
 	/**
 	 * Admin view of articles.
 	 */
-	public function admin($data){
+	public function admin(){
 		// Create array of all users for a user select dropdown.
 		$userModel = new User();
-		$content = [];
+		$dropdownContent = [];
 		$selectedUser = NULL;
 		$users = $userModel->findAll([], ['orderBy' => ['username', 'ASC']]);
 		foreach($users as $user){
-			// Take first found user as selecteduser.
+			// Take first found user as selected user.
 			if(is_null($selectedUser)){
 				$selectedUser = $user['user_id'];
 			}
-			$content[$user['user_id']] = $user['username'];
+			$dropdownContent[$user['user_id']] = $user['username'];
 		}
 		// Get all articles.
 		$articleModel = new Article();
-		// If user has been selected from dropdown,
-		if($this->methodPost()){
+		// If user has been selected from dropdown.
+		if(Application::$app->request->isPost()){
+			$data = Application::$app->request->post();
 			$selectedUser = $data['username'];
 		}
 		$articles = $articleModel->findAll(['user_id' => $selectedUser], ['orderBy' => ['created', 'DESC']]);
@@ -68,22 +72,27 @@ class Articles extends Controller {
 			$thisUser = $userModel->findOne($article['user_id']);
 			$articles[$key]['author'] = $thisUser->username;
 		}
-		$this->view('admin', ['articleModel' => $articleModel, 'articles' => $articles, 'userModel' => $userModel, 'content' => $content, 'selectedUser' => $selectedUser]);
+		$this->view('admin', ['articleModel' => $articleModel, 'articles' => $articles, 'userModel' => $userModel, 'dropdownContent' => $dropdownContent, 'selectedUser' => $selectedUser]);
 	}
 
-	public function article($data){
+	public function article(){
 		$articleModel = new Article();
+		$data = Application::$app->request->get();
 		$article = $articleModel->findOne($data['article_id']);
-		$userModel = new User();
-		$user = $userModel->findOne($article->user_id);
-		$article->author = $user->username;
-		$this->view('article', ['article' => $article]);
+		if($article){
+			$userModel = new User();
+			$user = $userModel->findOne($article->user_id);
+			$article->author = $user->username;
+			$this->view('article', ['article' => $article]);
+		} else {
+			Application::$app->request->redirect('articles', 'index');
+		}
 	}
 
 	/**
 	 * List of user's articles.
 	 */
-	public function myArticles(){
+	public function myarticles(){
 		$articleModel = new Article();
 		$articles = $articleModel->findAll(['user_id' => Session::getKey('user_id')], ['orderBy' => ['created', 'DESC']]);
 		$this->view('myarticles', ['model' => $articleModel, 'articles' => $articles]);
@@ -92,19 +101,18 @@ class Articles extends Controller {
 	/**
 	 * Write new article.
 	 */
-	public function write($data){
+	public function write(){
 		$articleModel = new Article();
-		if($this->methodPost()){
-
-			$articleModel->values($data);
+		if(Application::$app->request->isPost()){
+			$articleModel->values(Application::$app->request->post());
 			if($articleModel->validate()){
 				if($articleModel->save()){
 					SESSION::setFlash('success', 'Article saved.');
-					$this->redirect('articles', 'myarticles');
+					Application::$app->request->redirect('articles', 'myarticles');
 					exit;
 				} else {
 					SESSION::setFlash('error', 'Could not save article.');
-					$this->redirect('articles', 'myarticles');
+					Application::$app->request->redirect('articles', 'myarticles');
 				}
 			}
 		}
@@ -114,18 +122,30 @@ class Articles extends Controller {
 	/**
 	 * Edit an article.
 	 */
-	public function edit($data){
+	public function edit(){
+		// Multiple pages can send to edit action, redirect must send back to correct page.
+		$sender = Application::$app->request->getReferer();
+		// If sender was edit page, it was due to validation failing the previous time. If so, do not update sender.
+		if($sender !== false && $sender['action'] !== 'edit'){
+			Session::setKey(['senderController' => $sender['controller'], 'senderAction' => $sender['action']]);
+		}
 		$articleModel = new Article();
-		if($this->methodPost()){
-			$articleModel->values($data);
+		if(Application::$app->request->isPost()){
+			$articleModel->values(Application::$app->request->post());
 			if($articleModel->validate()){
 				if($articleModel->save()){
-					SESSION::setFlash('success', 'Article updated.');
-					$this->redirect('articles', 'admin');
+					Session::setFlash('success', 'Article updated.');
+					if(Session::checkKey('senderController') && Session::checkKey('senderAction')){
+						Application::$app->request->redirect(Session::getKey('senderController'), Session::getKey('senderAction'));
+						Session::unsetKey(['senderController', 'senderAction']);
+					} else {
+						Application::$app->request->redirect('articles', 'myarticles');
+					}
 					exit;
 				}
 			}
 		} else {
+			$data = Application::$app->request->get();
 			$article = $articleModel->findOne($data['article_id']);
 			$articleModel->values($article);
 		}
@@ -135,16 +155,22 @@ class Articles extends Controller {
 	/**
 	 * Delete article.
 	 */
-	public function delete($data){
-		if($this->methodGet()){
+	public function delete(){
+		// Multiple pages can send to delete action, redirect must send back to correct page.
+		$sender = Application::$app->request->getReferer();
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
 			$articleModel = new Article();
 			if($articleModel->delete($data['article_id'])){
-				SESSION::setFlash('success', 'Article deleted.');
-				$this->redirect('articles', 'admin');
-				exit;
+				Session::setFlash('success', 'Article deleted.');
 			} else {
-				$this->redirect('articles', 'admin');
+				Session::setFlash('error', 'Could not delete article.');
 			}
+		}
+		if($sender){
+			Application::$app->request->redirect($sender['controller'], $sender['action']);
+		} else {
+			Application::$app->request->redirect('articles', 'myarticles');
 		}
 	}
 }

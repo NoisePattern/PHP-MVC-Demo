@@ -30,7 +30,7 @@
 							<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/myarticles'; ?>">My articles</a></li>
 							<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/write'; ?>">Write article</a></li>
 							<?php } ?>
-							<?php if(Auth::authorize('admin', Application::$app->targetController->permissions)){ ?>
+							<?php if(Auth::authorize('admin', Application::$app->request->controller->permissions)){ ?>
 								<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/admin'; ?>">Article management</a></li>
 							<?php } ?>
 						</ul>

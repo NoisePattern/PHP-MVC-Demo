@@ -32,19 +32,5 @@ class Controller {
 	public function getName(){
 		return get_class($this);
 	}
-
-	public function methodPost(){
-		if(Application::$app->requestMethod === "POST") return true;
-		else return false;
-	}
-
-	public function methodGet(){
-		if(Application::$app->requestMethod === "GET") return true;
-		else return false;
-	}
-
-	public function redirect($controller, $action){
-		header('location:' . URLROOT . '/' . $controller . '/' . $action);
-	}
 }
 ?>

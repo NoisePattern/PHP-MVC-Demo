@@ -19,16 +19,16 @@ class Users extends Controller {
 	 *
 	 * @param array $data Request parameters.
 	 */
-	public function login($data){
+	public function login(){
 		$loginForm = new LoginForm();
-		if($this->methodPost()){
-			$loginForm->values($data);
+		if(Application::$app->request->isPost()){
+			$loginForm->values(Application::$app->request->post());
 			if($loginForm->validate()){
 				if($loginForm->login()){
-					$this->redirect('articles', 'index');
+					Application::$app->request->redirect('articles', 'index');
 					exit;
 				} else {
-					$this->redirect('users', 'login');
+					Application::$app->request->redirect('users', 'login');
 					exit;
 				}
 			}
@@ -51,7 +51,7 @@ class Users extends Controller {
 			);
 		}
 		session_destroy();
-		$this->redirect('users', 'login');
+		Application::$app->request->redirect('users', 'login');
 	}
 
 	/**
@@ -59,14 +59,14 @@ class Users extends Controller {
 	 *
 	 * @param array $data Request params.
 	 */
-	public function register($data){
+	public function register(){
 		$userModel = new User();
-		if($this->methodPost()){
-			$userModel->values($data);
+		if(Application::$app->request->isPost()){
+			$userModel->values(Application::$app->request->post());
 			if($userModel->validate()){
 				if($userModel->save()){
 					SESSION::setFlash('success', 'Registration successful.');
-					$this->redirect('users', 'login');
+					Application::$app->request->redirect('users', 'login');
 					exit;
 				}
 			}

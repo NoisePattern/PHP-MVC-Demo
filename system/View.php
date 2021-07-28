@@ -14,11 +14,11 @@ class View {
 		}
 		// Render view file content.
 		ob_start();
-		require_once(APPROOT . 'views' . DS . Application::$app->targetController->getName() . DS . $__view . '.php');
+		require_once(APPROOT . 'views' . DS . Application::$app->request->controller->getName() . DS . $__view . '.php');
 		$__viewRender = ob_get_clean();
 		// Render layout content and inject view to placeholder position.
 		ob_start();
-		require_once(APPROOT . 'views' . DS . 'layouts' . DS . Application::$app->targetController->getLayout() . '.php');
+		require_once(APPROOT . 'views' . DS . 'layouts' . DS . Application::$app->request->controller->getLayout() . '.php');
 		$__layoutRender = ob_get_clean();
 		echo str_replace('{{viewContent}}', $__viewRender, $__layoutRender);
 	}
