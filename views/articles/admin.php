@@ -2,7 +2,7 @@
 <?php
 $form = new Form();
 echo $form->openForm('', 'POST', 'row');
-echo $form->dropdown($userModel, 'username', $dropdownContent, $selectedUser, ['divClass' => 'col-md-6', 'noLabel' => true]);
+echo $form->using($userModel, 'username')->dropdown($dropdownContent, $selectedUser)->wrap(['class' => 'col-md-6']);
 echo $form->button('Select user', 'submit', ['divClass' => 'col-md-6']);
 echo $form->closeForm();
 

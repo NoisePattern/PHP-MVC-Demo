@@ -13,7 +13,7 @@ Juuren alla olevaan config/config.php tiedostoon tulee asettaa kantayhteystiedot
 TODO:
 * ~~Requestin sisällön käsittely omaan luokkaansa.~~
 * Routtauksen parantelu ja asettaminen omaan luokkaansa.
-* Form-luokassa liikaa koodin toistoa div-wrappereiden ja label-elementtien rakennuksessa, lyhennetään omiin metodeihin.
+* ~~Form-luokassa liikaa koodin toistoa div-wrappereiden ja label-elementtien rakennuksessa, lyhennetään omiin metodeihin.~~
 * Authorisaation uudelleenkirjoitus roolipohjaisiin käyttöoikeuksiin jotta esim. päivitystoiminnot voidaan rajata vain omistajaan. (Nyt kaikki menee läpi kun form-dataa menee sorkkimaan.)
 * Modelin validaatiosääntöihin Unique-sääntö estämään esim. käyttäjänimien ja emailien duplikaatio.
 * Virheiden näytön parantelu.

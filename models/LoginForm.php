@@ -66,7 +66,6 @@ class LoginForm extends Model {
 	public function login(){
 		$user = $this->findOne(['username' => $this->username]);
 		if(!$user || !password_verify($this->password, $user->password)){
-			Session::setFlash('error', 'Username or password is incorrect.');
 			return false;
 		} else {
 			Session::setKey([

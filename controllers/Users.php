@@ -28,8 +28,7 @@ class Users extends Controller {
 					Application::$app->request->redirect('articles', 'index');
 					exit;
 				} else {
-					Application::$app->request->redirect('users', 'login');
-					exit;
+					Session::setFlashRender('error', 'Username or password is incorrect.');
 				}
 			}
 		}

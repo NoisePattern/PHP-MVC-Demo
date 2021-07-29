@@ -3,9 +3,9 @@
 
 $form = new Form();
 echo $form->openForm(URLROOT .'/users/login', "POST");
-echo $form->inputField('text', $model, 'username', ['divClass' => 'mb-3']);
-echo $form->inputField('password', $model, 'password', ['divClass' => 'mb-3']);
-echo $form->button('Submit', 'submit');
+echo $form->using($model, 'username')->input('text')->label()->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'password')->input('password')->label()->wrap(['class' => 'mb-3']);
+echo $form->button('Login', 'submit', ['divClass' => 'mb-3']);
 echo $form->closeForm();
 
 ?>

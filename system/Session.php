@@ -80,6 +80,16 @@ class Session {
 	}
 
 	/**
+	 * Sets flash message for immediate display.
+	 *
+	 * @param string $type Type of flash message, either 'success' or 'error'.
+	 * @param string $message Flash message to be displayed.
+	 */
+	public static function setFlashRender($type, $message){
+		$_SESSION['flashMessage'][$type] = $message;
+	}
+
+	/**
 	 * Returns displayable flash message.
 	 *
 	 * @param string $type Type of flash message to retrieve.

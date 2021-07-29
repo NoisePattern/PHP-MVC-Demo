@@ -1,6 +1,7 @@
 <?php
-require_once(APPROOT . DS . 'system' . DS . 'Form.php');
-require_once(APPROOT . DS . 'system' . DS . 'Table.php');
+require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Form.php');
+require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'FormElements.php');
+require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Table.php');
 
 // Main purpose of view class is to encapsulate incoming data, so the $$key = $value declarations to not clash with any controller class variables.
 class View {

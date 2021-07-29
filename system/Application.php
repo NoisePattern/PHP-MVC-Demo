@@ -43,7 +43,7 @@ class Application {
 
 		// Authorization check.
 		if(Auth::authorize($this->request->action, $this->request->controller->permissions)){
-			call_user_func([$this->request->controller, $this->request->action], $this->request->params);
+			call_user_func([$this->request->controller, $this->request->action]);
 		} else {
 			$this->request->redirect(LANDING_CONTROLLER, LANDING_METHOD);
 		}

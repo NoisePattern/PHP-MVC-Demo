@@ -2,12 +2,12 @@
 <?php
 
 $form = new Form();
-echo $form->openForm(URLROOT .'/users/register', "POST");
-echo $form->inputField('text', $model, 'username', ['placeholder' => 'Your username', 'divClass' => 'mb-3']);
-echo $form->inputField('email', $model, 'email', ['divClass' => 'mb-3']);
-echo $form->inputField('password', $model, 'password', ['divClass' => 'mb-3']);
-echo $form->inputField('password', $model, 'confirmPassword', ['divClass' => 'mb-3']);
-echo $form->button('Submit', 'submit');
+echo $form->openForm('', "POST");
+echo $form->using($model, 'username')->input('text')->label()->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'email')->input('email')->label()->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'password')->input('password')->label()->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'confirmPassword')->input('password')->label()->wrap(['class' => 'mb-3']);
+echo $form->button('Register', 'submit');
 echo $form->closeForm();
 
 ?>
