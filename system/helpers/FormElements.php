@@ -3,7 +3,7 @@
 class FormElement {
 
 	public $model;
-	public $name = '';
+	public $name;
 	public $displayName = '';
 	public $errorText = false;
 	public $elements = [
@@ -251,26 +251,30 @@ class FormElement {
 	/**
 	 * Creates one checkbox. Will be rendered in checked state if the value in model exists and matches the value given to checkbox.
 	 *
-	 * @param mixed $value The value submitted by the checkbox when it is selected.
 	 * @param array options Array of options to format the checkbox.
 	 * - id: Sets custom id attribute to element. Default value is name from model.
 	 * - class: Sets custom class value to element. Default value is 'form-select'.
 	 * - noWrap: If false, skips wrap setting.
 	 * - labelFor: Sets custom for attribute. Default value is name from model.
+	 * - labelClass: Sets custom class value to label. Default is 'form-check-label'.
 	 * - labelText: Sets custom text to label. Default value is model's label text.
 	 * - unchecked: Sends a value in hidden field when checkbox is unchecked.
+	 * - value: Sets custom value. Default value is '1'.
 	 */
-	public function checkbox($value, $options = []){
+	public function checkbox($options = []){
 		$checkbox = '';
 		// Set checkbox div wrapper class.
 		if(!isset($options['noWrap'])) $this->wrap(['class' => 'form-check']);
 		// Unchecked hidden value.
 		if(isset($options['unchecked'])){
-			$checkbox .= $this->hidden(['value' => 0]);
+			$checkbox .= $this->hidden(['value' => $options['unchecked']]);
 			$this->hidden = false;
 		}
 		// Open element. Set brackets to name if serving an array of model data.
-		$checkbox .= '<input type="checkbox" name="' . $this->name . (is_array($this->model->{$this->name}) ? '[]' : '') . '" value="' . $value . '"';
+		$checkbox .= '<input type="checkbox" name="' . $this->name . (is_array($this->model->{$this->name}) ? '[]' : '') . '"';
+		// Set value.
+		$value = isset($options['value']) ? $options['value'] : 1;
+		$checkbox .= ' value ="' . $value . '"';
 		// Construct id attribute.
 		if(isset($options['id']) && $options['id'] !== false){
 			$checkbox .= ' id ="' . $options['id'] . '"';
@@ -288,17 +292,18 @@ class FormElement {
 			$checkbox .= '"';
 		}
 		// Checked state.
-		if(isset($this->model->{$this->name})){
-			if(is_array($this->model->{$this->name}) && in_array($value, $this->model->{$this->name})){
-				$checkbox .= ' checked';
-			} else if($this->model->{$this->name} == $value){
-				$checkbox .= ' checked';
-			}
+		if(is_array($this->model->{$this->name})){
+			if(in_array($value, $this->model->{$this->name})) $checkbox .= ' checked';
+		} else {
+			if($this->model->{$this->name} == $value) $checkbox .= ' checked';
 		}
 		// Close element.
 		$checkbox .= '>';
 		// Attach label directly to checkbox element.
-		$this->label((isset($options['labelText']) ? $options['labelText'] : ''), ['for' => (isset($options['labelFor']) ? $options['labelFor'] : ''), 'class' => 'form-check-label']);
+		$this->label(
+			(isset($options['labelText']) ? $options['labelText'] : ''),
+			['for' => (isset($options['labelFor']) ? $options['labelFor'] : ''), 'class' => (isset($options['labelClass']) ? $options['labelClass'] : 'form-check-label')]
+		);
 		$checkbox .= $this->elements['label'];
 		$this->elements['label'] = '';
 		$this->elements['element'] = $checkbox;
@@ -307,20 +312,31 @@ class FormElement {
 	}
 
 	/**
-	 * Creates multiple checkboxes. Model supplies the key-value array where array keys are checkbox values and array values are checkbox labels.
+	 * Creates multiple checkboxes. Model supplies the array of values that should be checked on the checkboxes.
 	 * Checkboxes with values that match the array supplied to the method are set checked.
 	 *
-	 * @param array $checked Array of values that should be set checked.
+	 * @param array $list Array from which array keys are used as checkbox values, and array values are used as checkbox label texts.
+	 * @param array $options Array of options to format the checkboxes.
+	 * - class: Sets custom class value to element. Default value is 'form-check-input'.
+	 * - labelClass: Sets custom class value to label. Default is 'form-check-label'.
+	 * @return object Returns object back to method chain.
 	 */
-	public function checkboxMulti($checked, $options = []){
+	public function checkboxMulti($list, $options = []){
 		$this->wrap(['class' => 'form-check']);
 		// Go through every entry in model's array.
 		$checkbox = '';
-		foreach($this->model->{$this->name} as $key => $value){
+		foreach($list as $key => $value){
 			// Each checkbox must receive individual wrapping.
 			$checkbox .= $this->start();
-			$id = $this->model->{$this->name}[$key] . '_' . $key;
-			$this->checkbox($key, ['id' => $id, 'labelFor' => $id, 'labelText' => $value, 'noWrap' => true]);
+			$id = str_replace(' ', '', ucwords($value) . $key);
+			$sendOptions = ['id' => $id, 'labelFor' => $id, 'labelText' => $value, 'noWrap' => true, 'value' => $key];
+			if(isset($options['class'])){
+				$sendOptions['class'] = $options['class'];
+			}
+			if(isset($options['labelClass'])){
+				$sendOptions['labelClass'] = $options['labelClass'];
+			}
+			$this->checkbox($sendOptions);
 			$checkbox .= $this->elements['element'];
 			// Close individual wrap.
 			$checkbox .= $this->end();

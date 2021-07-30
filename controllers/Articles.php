@@ -109,7 +109,6 @@ class Articles extends Controller {
 	public function write(){
 		$articleModel = new Article();
 		if(Application::$app->request->isPost()){
-			die;
 			$articleModel->values(Application::$app->request->post());
 			if($articleModel->validate()){
 				if($articleModel->save()){
@@ -122,7 +121,6 @@ class Articles extends Controller {
 				}
 			}
 		}
-		$articleModel->tester = [10 => 'Ten', 20 => 'Twenty', 30 => 'Thirty', 40 => 'Fourty'];
 		$this->view('write', ['model' => $articleModel, 'useEditor' => true]);
 	}
 

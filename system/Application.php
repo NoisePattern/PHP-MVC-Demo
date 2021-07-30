@@ -53,9 +53,9 @@ class Application {
 	 * Sets target to landing page.
 	 */
 	public function targetLanding(){
-		$this->requst->controller = LANDING_CONTROLLER;
+		$this->request->controller = LANDING_CONTROLLER;
 		$this->request->action = LANDING_METHOD;
-		require_once(APPROOT . 'controllers' . DS . $this->controller . '.php');
+		require_once(APPROOT . 'controllers' . DS . $this->request->controller . '.php');
 	}
 
 	/**
