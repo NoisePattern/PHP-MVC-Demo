@@ -6,6 +6,7 @@ $form = new Form();
 echo $form->openForm('', "POST");
 echo $form->using($model, 'article_id')->hidden();
 echo $form->using('', 'user_id')->hidden(['value' => Session::getKey('user_id')]);
+echo $form->using($model, 'published')->checkbox(1, ['unchecked' => 0])->wrap(['class' => 'mb-3']);
 echo $form->using($model, 'caption')->input('text')->label()->wrap(['class' => 'mb-3']);
 echo $form->using($model, 'content')->textarea(['id' => 'summernote'])->label()->wrap(['class' => 'mb-3']);
 echo $form->button('Save article', 'submit');

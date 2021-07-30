@@ -13,6 +13,10 @@ $columns = [
 		'format' => ['date', 'j.n.Y']
 	],
 	[
+		'field' => 'published',
+		'format' => ['keyValues', [0 => 'No', 1 => 'Yes']]
+	],
+	[
 		'columnLabel' => '',
 		'buttonLink' => ['Edit', 'articles/edit', 'article_id'],
 	],

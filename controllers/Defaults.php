@@ -1,8 +1,6 @@
 <?php
 
 class Defaults extends Controller {
-	public $useModels = [];
-	public $permissions = [];
 
 	public function notfound(){
 		$this->view('notfound');
@@ -12,4 +10,5 @@ class Defaults extends Controller {
 		$this->view('error');
 	}
 }
+
 ?>

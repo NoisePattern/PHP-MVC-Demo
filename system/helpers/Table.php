@@ -80,6 +80,13 @@ class Table {
 									$data .= '...';
 								}
 							}
+							// If format is 'keyValues'
+							else if($column['format'][0] === 'keyValues'){
+								$array = $column['format'][1];
+								if(array_key_exists($data, $array)){
+									$data = $array[$data];
+								}
+							}
 						}
 						$row .= '<td class="align-middle">' . $data . '</td>';
 					}

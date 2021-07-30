@@ -4,31 +4,35 @@ class Articles extends Controller {
 	/**
 	 * Define an array of models that are required.
 	 */
-	public $useModels = [
-		'Article',
-		'User'
-	];
+	public function useModels(){
+		return [
+			'Article',
+			'User'
+		];
+	}
 
 	/**
 	 * Define an array of authorization permissions.
 	 */
-	public $permissions = [
-		'admin' => [
-			'setting' => ['level' => [2]]
-		],
-		'myarticles' => [
-			'login' => true
-		],
-		'write' => [
-			'login' => true
-		],
-		'edit' => [
-			'login' => true
-		],
-		'delete' => [
-			'login' => true
-		]
-	];
+	public function permissions(){
+		return [
+			'admin' => [
+				'setting' => ['level' => [2]]
+			],
+			'myarticles' => [
+				'login' => true
+			],
+			'write' => [
+				'login' => true
+			],
+			'edit' => [
+				'login' => true
+			],
+			'delete' => [
+				'login' => true
+			]
+		];
+	}
 
 	/**
 	 * Browse articles.
@@ -36,7 +40,7 @@ class Articles extends Controller {
 	public function index(){
 		$articleModel = new Article();
 		$userModel = new User();
-		$articles = $articleModel->findAll([], ['orderBy' => ['created', 'DESC']]);
+		$articles = $articleModel->findAll(['published' => 1], ['orderBy' => ['created', 'DESC']]);
 		foreach($articles as $key => $article){
 			$user = $userModel->findOne($article['user_id']);
 			$articles[$key]['author'] = $user->username;
@@ -65,14 +69,15 @@ class Articles extends Controller {
 		// If user has been selected from dropdown.
 		if(Application::$app->request->isPost()){
 			$data = Application::$app->request->post();
-			$selectedUser = $data['username'];
+			$selectedUser = $data['selectedUser'];
 		}
+		$userModel->selectedUser = $selectedUser;
 		$articles = $articleModel->findAll(['user_id' => $selectedUser], ['orderBy' => ['created', 'DESC']]);
 		foreach($articles as $key => $article){
 			$thisUser = $userModel->findOne($article['user_id']);
 			$articles[$key]['author'] = $thisUser->username;
 		}
-		$this->view('admin', ['articleModel' => $articleModel, 'articles' => $articles, 'userModel' => $userModel, 'dropdownContent' => $dropdownContent, 'selectedUser' => $selectedUser]);
+		$this->view('admin', ['articleModel' => $articleModel, 'articles' => $articles, 'userModel' => $userModel, 'dropdownContent' => $dropdownContent]);
 	}
 
 	public function article(){
@@ -104,6 +109,7 @@ class Articles extends Controller {
 	public function write(){
 		$articleModel = new Article();
 		if(Application::$app->request->isPost()){
+			die;
 			$articleModel->values(Application::$app->request->post());
 			if($articleModel->validate()){
 				if($articleModel->save()){
@@ -116,6 +122,7 @@ class Articles extends Controller {
 				}
 			}
 		}
+		$articleModel->tester = [10 => 'Ten', 20 => 'Twenty', 30 => 'Thirty', 40 => 'Fourty'];
 		$this->view('write', ['model' => $articleModel, 'useEditor' => true]);
 	}
 

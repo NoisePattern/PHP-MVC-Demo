@@ -39,6 +39,13 @@ abstract class Model {
 	abstract function labels();
 
 	/**
+	 * Validation rules for model variables. Each key must be identical to a model variable name defined above.
+	 *
+	 * @return array Returns an associative array containing validation rules.
+	 */
+	abstract function rules();
+
+	/**
 	 * Sets model's data to given values. Model value is set only if a variable with same name as array's key exists.
 	 *
 	 * @param array $data Associative array of data to be set to model.
@@ -254,11 +261,8 @@ abstract class Model {
 		$this->beforeSave();
 		$tableName = $this->tableName();
 		$fields = $this->fields();
-		var_dump($fields);
-		echo '<br>';
 		// Remove fields set as ignored by rules validation.
 		$fields = $this->removeIgnored($fields);
-		var_dump($fields);
 		echo $this->updated;
 		// Create PDO placeholders.
 		$params = implode(', ', array_map(fn($name) => $name  . ' = :' . $name, $fields));
@@ -370,6 +374,17 @@ abstract class Model {
 		}
 		$statement->execute();
 		return $statement->fetchAll();
+	}
+	/**
+	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
+	 */
+	public function beforeSave(){
+	}
+
+	/**
+	 * Post-save operations. If model successfully inserted or updated, this action runs.
+	 */
+	public function afterSave(){
 	}
 }
 ?>

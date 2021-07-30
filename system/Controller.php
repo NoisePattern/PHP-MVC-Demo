@@ -5,13 +5,22 @@ class Controller {
 
 	public function __construct(){
 		// Require controller's models.
-		if(isset($this->useModels)){
-			foreach($this->useModels as $thisModel){
+		$models = $this->useModels();
+		if(!empty($models)){
+			foreach($models as $thisModel){
 				if(file_exists(APPROOT . 'models' . DS . $thisModel . '.php')){
 					require_once(APPROOT . 'models' . DS . $thisModel . '.php');
 				}
 			}
 		}
+	}
+
+	public function useModels(){
+		return [];
+	}
+
+	public function permissions(){
+		return [];
 	}
 
 	// Loads a view and a layout.

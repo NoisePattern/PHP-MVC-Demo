@@ -4,15 +4,12 @@ class Users extends Controller {
 	/**
 	 * Define an array of models that are required.
 	 */
-	public $useModels = [
-		'User',
-		'LoginForm'
-	];
-
-	/**
-	 * Define an array of authorization permissions.
-	 */
-	public $permissions = [];
+	public function useModels(){
+		return [
+			'User',
+			'LoginForm'
+		];
+	}
 
 	/**
 	 * Login action.

@@ -18,6 +18,7 @@ class Article extends Model {
 	public $user_id;
 	public $caption;
 	public $content;
+	public $published;
 	public $created;
 	public $updated;
 
@@ -40,6 +41,7 @@ class Article extends Model {
 			'user_id',
 			'caption',
 			'content',
+			'published',
 			'created',
 			'updated'
 		];
@@ -56,6 +58,7 @@ class Article extends Model {
 			'user_id' => 'Writer',
 			'caption' => 'Article name',
 			'content' => 'Content',
+			'published' => 'Published',
 			'created' => 'Created',
 			'updated' => 'Updated'
 		];

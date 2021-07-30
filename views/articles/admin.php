@@ -2,7 +2,7 @@
 <?php
 $form = new Form();
 echo $form->openForm('', 'POST', 'row');
-echo $form->using($userModel, 'username')->dropdown($dropdownContent, $selectedUser)->wrap(['class' => 'col-md-6']);
+echo $form->using($userModel, 'selectedUser')->dropdown($dropdownContent)->wrap(['class' => 'col-md-6']);
 echo $form->button('Select user', 'submit', ['divClass' => 'col-md-6']);
 echo $form->closeForm();
 
@@ -22,6 +22,10 @@ $columns = [
 		'columnLabel' => 'Created',
 		'field' => 'created',
 		'format' => ['date', 'j.n.Y']
+	],
+	[
+		'field' => 'published',
+		'format' => ['keyValues', [0 => 'No', 1 => 'Yes']]
 	],
 	[
 		'columnLabel' => '',

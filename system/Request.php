@@ -4,7 +4,7 @@ class Request {
 
 	public $host = '';			// Current domain.
 	public $path = '';			// Current path.
-	public $controller = '';	// Controller name from path.
+	public $controller;			// Controller name from path.
 	public $action = '';		// Action name from path.
 	public $method = '';		// Request method, either GET or POST.
 	public $getParams = [];		// GET request params.
@@ -70,7 +70,14 @@ class Request {
 		}
 		else if($this->method === "POST"){
 			foreach($_POST as $key => $value){
-				$this->postParams[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
+				if(is_array($value)){
+					array_walk_recursive($value, function(&$attr){
+						$attr = filter_var($attr, FILTER_SANITIZE_SPECIAL_CHARS);
+					});
+					$this->postParams[$key] = $value;
+				} else {
+					$this->postParams[$key] = filter_input(INPUT_POST, $key, FILTER_SANITIZE_SPECIAL_CHARS);
+				}
 			}
 		}
 	}
@@ -95,8 +102,7 @@ class Request {
 	 * @return boolean Returns true if request was POST, otherwise returns false.
 	 */
 	public function isPost(){
-		if($this->method === "POST") return true;
-		else return false;
+		return $this->method === "POST";
 	}
 
 	/**
@@ -105,8 +111,7 @@ class Request {
 	 * @return boolean Returns true if request was GET, otherwise returns false.
 	 */
 	public function isGet(){
-		if($this->method === "GET") return true;
-		else return false;
+		return $this->method === "GET";
 	}
 
 	/**

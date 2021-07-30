@@ -34,6 +34,7 @@ CREATE TABLE `articles` (
   `user_id` int(11) NOT NULL,
   `caption` varchar(200) COLLATE utf8_unicode_ci NOT NULL,
   `content` text COLLATE utf8_unicode_ci NOT NULL,
+  `published` tinyint(1) NOT NULL DEFAULT 0,
   `created` datetime NOT NULL,
   `updated` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
