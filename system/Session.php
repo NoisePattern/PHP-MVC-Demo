@@ -62,7 +62,7 @@ class Session {
 	/**
 	 * Unsets a key.
 	 *
-	 * @param string $keys An array containing names of keys to unset.
+	 * @param array $keys An array containing names of keys to unset.
 	 */
 	public static function unsetKey($keys){
 		foreach($keys as $key){

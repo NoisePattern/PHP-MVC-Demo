@@ -26,7 +26,7 @@
 	define('LANDING_METHOD', 'index');
 
 	// Page not found path. If controller and/or method in URL are not found, not found page is set as target.
-	define('NOTFOUND_CONTROLLER', 'defaults');
+	define('NOTFOUND_CONTROLLER', 'Defaults');
 	define('NOTFOUND_METHOD', 'notfound');
 
 	// Website name.

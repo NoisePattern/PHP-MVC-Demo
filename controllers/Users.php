@@ -22,6 +22,7 @@ class Users extends Controller {
 			$loginForm->values(Application::$app->request->post());
 			if($loginForm->validate()){
 				if($loginForm->login()){
+					session_regenerate_id();
 					Application::$app->request->redirect('articles', 'index');
 					exit;
 				} else {

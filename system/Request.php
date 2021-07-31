@@ -21,7 +21,6 @@ class Request {
 	public function handleUrl(){
 		$this->host = filter_var($_SERVER['HTTP_HOST'], FILTER_SANITIZE_URL);
 		$this->path = parse_url(filter_var($_SERVER['REQUEST_URI'], FILTER_SANITIZE_URL), PHP_URL_PATH);
-		$this->path = trim($this->path, '/');
 		$this->path = $this->removeRoot($this->path);
 		$route = $this->splitPath($this->path);
 		if($route !== false){

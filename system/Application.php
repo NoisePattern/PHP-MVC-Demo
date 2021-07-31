@@ -3,7 +3,10 @@
 class Application {
 	public static $app;
 	public $request;
-	public $requestMethod = '';
+	public $router;
+	public $controller;
+	public $action;
+//	public $requestMethod = '';
 	public $params = [];
 
 	public function __construct(){
@@ -12,59 +15,32 @@ class Application {
 		// Start session.
 		Session::start();
 		$this->request = new Request();
+		$this->router = new Router();
 	}
 
 	/**
 	 * Main application execution.
 	 */
-	public function execute($redirect = false){
-		// Check if url sets target controller.
-		if(!empty($this->request->controller)){
-			// Check if controller exists.
-			if(file_exists(APPROOT . 'controllers' . DS . $this->request->controller . '.php')){
-				require_once(APPROOT . 'controllers' . DS . $this->request->controller . '.php');
-				// Check if target method is not set or doesn't exist in controller. If so, go to not found page.
-				if(empty($this->request->action) || !method_exists($this->request->controller, $this->request->action)){
-					$this->targetNotFound();
-				}
-			}
-			// Given controller does not exist, go to not found page
-			else {
-				$this->targetNotFound();
+	public function execute(){
+		// Get targeted controller and action.
+		$target = $this->router->getRoute($this->request->path);
+		if($target){
+			require_once(APPROOT . 'controllers' . DS . $target['controller'] . '.php');
+			$this->controller = new $target['controller'];
+			// Authorization check.
+			if(Auth::authorize($target['action'], $this->controller->permissions())){
+				call_user_func([$this->controller, $target['action']]);
+			} else {
+				$this->request->redirect(LANDING_CONTROLLER, LANDING_METHOD);
 			}
 		}
-		// Controller not set, go to landing page.
 		else {
-			$this->targetLanding();
+			$name= NOTFOUND_CONTROLLER;
+			require_once(APPROOT . 'controllers' . DS . NOTFOUND_CONTROLLER . '.php');
+			$this->controller = new $name;
+			call_user_func([$this->controller, NOTFOUND_METHOD]);
 		}
 
-		// Instantiate controller.
-		$this->request->controller = new $this->request->controller();
-
-		// Authorization check.
-		if(Auth::authorize($this->request->action, $this->request->controller->permissions())){
-			call_user_func([$this->request->controller, $this->request->action]);
-		} else {
-			$this->request->redirect(LANDING_CONTROLLER, LANDING_METHOD);
-		}
-	}
-
-	/**
-	 * Sets target to landing page.
-	 */
-	public function targetLanding(){
-		$this->request->controller = LANDING_CONTROLLER;
-		$this->request->action = LANDING_METHOD;
-		require_once(APPROOT . 'controllers' . DS . $this->request->controller . '.php');
-	}
-
-	/**
-	 * Sets target to not found page.
-	 */
-	public function targetNotFound(){
-		$this->request->controller = NOTFOUND_CONTROLLER;
-		$this->request->action = NOTFOUND_METHOD;
-		require_once(APPROOT . 'controllers' . DS . $this->request->controller . '.php');
 	}
 }
 ?>
