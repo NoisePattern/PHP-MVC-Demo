@@ -11,9 +11,7 @@ class FormElement {
 		'element' => '',
 		'error' => ''
 	];
-	public $wrapping = [			// Attributes for div class that wraps the element.
-		'render' => true			// Wrapping div is constructed by default.
-	];
+	public $wrapClass = '';
 	public $hidden = false;			// Creating a hidden element. This omits other output except the element itself.
 
 	public function __construct($model, $name){
@@ -41,13 +39,8 @@ class FormElement {
 	 * Creates opening div. Div wrapping can be turned off by calling wrap(false) and back on with wrap(true).
 	 */
 	public function start(){
-		if($this->wrapping['render'] && $this->hidden === false){
-			$div = '<div';
-			if(isset($this->wrapping['class'])){
-				$div .= ' class="' . $this->wrapping['class'] . '"';
-			}
-			$div .= '>';
-			return $div;
+		if($this->wrapClass !== false && $this->hidden === false){
+			return '<div class="' . $this->wrapClass . '">';
 		}
 		return '';
 	}
@@ -56,7 +49,7 @@ class FormElement {
 	 * Creates closing div.
 	 */
 	public function end(){
-		if($this->wrapping['render'] && $this->hidden === false){
+		if($this->wrapClass !== false && $this->hidden === false){
 			return '</div>';
 		}
 		return '';
@@ -253,8 +246,7 @@ class FormElement {
 	 *
 	 * @param array options Array of options to format the checkbox.
 	 * - id: Sets custom id attribute to element. Default value is name from model.
-	 * - class: Sets custom class value to element. Default value is 'form-select'.
-	 * - noWrap: If false, skips wrap setting.
+	 * - class: Sets custom class value to element. Default value is 'form-check-input'.
 	 * - labelFor: Sets custom for attribute. Default value is name from model.
 	 * - labelClass: Sets custom class value to label. Default is 'form-check-label'.
 	 * - labelText: Sets custom text to label. Default value is model's label text.
@@ -264,7 +256,7 @@ class FormElement {
 	public function checkbox($options = []){
 		$checkbox = '';
 		// Set checkbox div wrapper class.
-		if(!isset($options['noWrap'])) $this->wrap(['class' => 'form-check']);
+		$this->wrap(['class' => 'form-check']);
 		// Unchecked hidden value.
 		if(isset($options['unchecked'])){
 			$checkbox .= $this->hidden(['value' => $options['unchecked']]);
@@ -302,7 +294,7 @@ class FormElement {
 		// Attach label directly to checkbox element.
 		$this->label(
 			(isset($options['labelText']) ? $options['labelText'] : ''),
-			['for' => (isset($options['labelFor']) ? $options['labelFor'] : ''), 'class' => (isset($options['labelClass']) ? $options['labelClass'] : 'form-check-label')]
+			['for' => (isset($options['labelFor']) ? $options['labelFor'] : $this->name), 'class' => (isset($options['labelClass']) ? $options['labelClass'] : 'form-check-label')]
 		);
 		$checkbox .= $this->elements['label'];
 		$this->elements['label'] = '';
@@ -321,15 +313,15 @@ class FormElement {
 	 * - labelClass: Sets custom class value to label. Default is 'form-check-label'.
 	 * @return object Returns object back to method chain.
 	 */
-	public function checkboxMulti($list, $options = []){
+	public function checkboxGroup($list, $options = []){
 		$this->wrap(['class' => 'form-check']);
-		// Go through every entry in model's array.
+		// Go through checkboxes.
 		$checkbox = '';
 		foreach($list as $key => $value){
 			// Each checkbox must receive individual wrapping.
 			$checkbox .= $this->start();
-			$id = str_replace(' ', '', ucwords($value) . $key);
-			$sendOptions = ['id' => $id, 'labelFor' => $id, 'labelText' => $value, 'noWrap' => true, 'value' => $key];
+			$id = $this->name . '_' . $key;
+			$sendOptions = ['id' => $id, 'labelFor' => $id, 'labelText' => $value, 'value' => $key];
 			if(isset($options['class'])){
 				$sendOptions['class'] = $options['class'];
 			}
@@ -338,12 +330,74 @@ class FormElement {
 			}
 			$this->checkbox($sendOptions);
 			$checkbox .= $this->elements['element'];
+			// Bootstrap requires error messages to be within the same container that holds the form element causing it, or it will not display.
+			// Because the error is for the entire checkbox group it is added only once, to the last checkbox.
+			if($key == array_key_last($list) && $this->errorText){
+				$this->error();
+				$checkbox .= $this->elements['error'];
+				$this->unsetError();
+			}
 			// Close individual wrap.
 			$checkbox .= $this->end();
 		}
 		$this->elements['element'] = $checkbox;
-		// Because every checkbox has been wrapped individually, turn off wrapping at output stage.
-		$this->wrap(false);
+		// Set the default wrap class of the checkbox group. Calling wrap down the method chain can be used to change this.
+		$this->wrap(['class' => '']);
+		return $this;
+	}
+
+	/**
+	 * Creates radio buttons. If any of the keys in given list of radios matches the value in model, it is set selected.
+	 *
+	 * @param array $list Array from which array keys are used as radio values, and array values are used as radio label texts.
+	 * @param array $options Array of options to format the radios.
+	 * - class: Sets custom class value to element. Default value is 'form-check-input'.
+	 * - labelClass: Sets custom class value to label. Default is 'form-check-label'.
+	 * @return object Returns object back to method chain.
+	 */
+	public function radio($list, $options = []){
+		$this->wrap(['class' => 'form-check']);
+		// Go through radios.
+		$radio = '';
+		foreach($list as $key => $value){
+			// Each radio must receive individual wrapping.
+			$radio .= $this->start();
+			// Open element and set value.
+			$radio .= '<input type="radio" name="' . $this->name . '" value ="' . $key . '"';
+			// Construct id attribute.
+			$id = $this->name . '_' . $key;
+			$radio .= ' id="' . $id . '"';
+			// Construct class attribute.
+			if(isset($options['class']) && $options['class'] !== false){
+				$radio .= ' class="' . $options['class'];
+				if($this->errorText !== false) $radio .= ' is-invalid';
+				$radio .= '"';
+			} else {
+				$radio .= ' class="form-check-input';
+				if($this->errorText !== false) $radio .= ' is-invalid';
+				$radio .= '"';
+			}
+			// Checked state.
+			if($key == $this->model->{$this->name}) $radio .= ' checked';
+			// Close element.
+			$radio .= '>';
+			// Attach label directly to radio element.
+			$this->label($value, ['for' => $id, 'class' => (isset($options['labelClass']) ? $options['labelClass'] : 'form-check-label')]);
+			$radio .= $this->elements['label'];
+			// Close individual wrap.
+			$radio .= $this->end();
+		}
+		$this->elements['element'] = $radio;
+		$this->elements['label'] = '';
+		// Set the wrap of the radio group.
+		if(isset($options['wrapClass'])){
+			if(!$options['wrapClass']) $this->wrap(false);
+			else $this->wrap(['class' => $options['wrapClass']]);
+		} else {
+			$this->wrap(['class' => '']);
+		}
+		// Set the default wrap class of the radio group. Calling wrap down the method chain can be used to change this.
+		$this->wrap(['class' => '']);
 		return $this;
 	}
 
@@ -351,19 +405,21 @@ class FormElement {
 	 * Sets attributes for the wrapping div.
 	 *
 	 * @param array|boolean $attributes Attributes to set to the element.
-	 * - Array: sets attributes from array key-value pairs. If attribute has aleady been set, the value is appended to existing value with space.
+	 * - Array: sets attributes from array key-value pairs. If attribute has already been set, the value is appended to existing value with space.
 	 * - Boolean false: omits the wrapping div from this element. Shortcut to sending 'render' => false in array.
 	 * @return object Returns object back to method chain.
 	 */
 	public function wrap($attributes){
 		if($attributes === false){
-			$this->wrapping['render'] = false;
-			return;
+			$this->wrapClass = false;
+			return $this;
 		}
-		foreach($attributes as $key => $value){
-			array_key_exists($key, $this->wrapping) ? $this->wrapping[$key] .= ' ' . $value : $this->wrapping[$key] = $value;
+		if(isset($attributes['class'])){
+			$this->wrapClass = $attributes['class'];
 		}
-		// Return object to method chain.
+		else if(isset($attributes['addClass'])){
+			$this->wrapClass = $this->wrapClass . ' ' . $attributes['addClass'];
+		}
 		return $this;
 	}
 
@@ -371,7 +427,15 @@ class FormElement {
 	 * Creates an error display div.
 	 */
 	public function error(){
-		$this->elements['error'] = $error = '<div class="invalid-feedback">' . $this->errorText . '</div>';
+		$this->elements['error'] = '<div class="invalid-feedback">' . $this->errorText . '</div>';
+	}
+
+	/**
+	 * Unsets error state and clears message.
+	 */
+	public function unsetError(){
+		$this->errorText = false;
+		$this->elements['error'] = '';
 	}
 }
 

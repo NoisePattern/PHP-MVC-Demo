@@ -14,6 +14,7 @@ TODO:
 * ~~Requestin sisällön käsittely omaan luokkaansa.~~
 * Routtauksen parantelu ja asettaminen omaan luokkaansa.
 * ~~Form-luokassa liikaa koodin toistoa div-wrappereiden ja label-elementtien rakennuksessa, lyhennetään omiin metodeihin.~~
+* Puuttuvat form-elementtien rakentajametodit.
 * Authorisaation uudelleenkirjoitus roolipohjaisiin käyttöoikeuksiin jotta esim. päivitystoiminnot voidaan rajata vain omistajaan. (Nyt kaikki menee läpi kun form-dataa menee sorkkimaan.)
 * Modelin validaatiosääntöihin Unique-sääntö estämään esim. käyttäjänimien ja emailien duplikaatio.
 * Virheiden näytön parantelu.
