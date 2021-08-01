@@ -150,12 +150,22 @@ abstract class Model {
 						$this->addError($field, 'numericmax', $rule);
 					}
 				}
+				// Rule: unique database entry.
+				else if($ruleType === 'unique'){
+					// Check for match in database.
+					$found = $this->findOne(["$field" => "$value"]);
+					if($found){
+						$this->addError($field, 'unique', $rule);
+					}
+
+				}
 				// Rule: on action only.
 				else if($ruleType === 'on'){
 					// If field is used on create only and request is not for create, field is not used.
 					if($rule['action'] === 'create' && !$this->isCreate()){
 						$this->ignoreFields[] = $field;
 					}
+					// IF field is used on update only and request is not for update, field is not used.
 					else if($rule['action'] === 'update' && !$this->isUpdate()){
 						$this->ignoreFields[] = $field;
 					}
@@ -207,6 +217,9 @@ abstract class Model {
 		}
 		else if($ruleType === 'numericmax'){
 			$this->errors[$field][] = 'Largest allowed value for ' . $fieldLabel . ' is ' . $rule['max'] . '.';
+		}
+		else if($ruleType === 'unique'){
+			$this->errors[$field][] = 'This ' . strtolower($fieldLabel) . ' is already in use.';
 		}
 	}
 

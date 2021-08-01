@@ -75,8 +75,8 @@ class User extends Model {
 	 */
 	public function rules(){
 		return [
-			'username' => ['required', ['length' , 'max' => 255]],
-			'email' => ['required', 'email'],
+			'username' => ['required', 'unique', ['length' , 'max' => 255]],
+			'email' => ['required', 'unique', 'email'],
 			'password' => ['required', ['length', 'min' => 5]],
 			'confirmPassword' => ['required', ['compare', 'field' => 'password']],
 			'created' => [['on', 'action' => 'create']],
