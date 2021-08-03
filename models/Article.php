@@ -71,7 +71,7 @@ class Article extends Model {
 	 */
 	public function rules(){
 		return [
-			'user_id' => ['required'],
+			'user_id' => [['on', 'action' => 'create']],
 			'caption' => ['required', ['length', 'max' => 200]],
 			'content' => ['required'],
 			'created' => [['on', 'action' => 'create']],
