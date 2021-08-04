@@ -32,12 +32,15 @@ class ElementConstructor {
 			// that are not direct children document root, when there are multiple children to document root.
 			if($node->parentNode->nodeName !== '#document') continue;
 			$nodes = $this->root->importNode($node, true);
+			// If no target specified, append to root.
 			if($target === false){
 				$this->append($nodes, $this->root);
 			}
+			// If target is specified as an element in DOMDocument, attach to element.
 			else if(is_object($target)){
 				$this->append($nodes, $target);
 			}
+			// If target is specifiec as element name find the element and attach to it.
 			else {
 				$list = $this->root->getElementsByTagName($target);
 				$item = $list->item(0);
@@ -50,10 +53,16 @@ class ElementConstructor {
 	 * Creates a new element. It must be appended to DOM.
 	 *
 	 * @param string $name The created element's name.
+	 * @param array $attributes Attributes to be added to element as key-value pairs.
 	 * @return object Returns the created element.
 	 */
-	public function createElement($name){
-		return $this->root->createElement($name);
+	public function createElement($name, $attributes = []){
+		$element = $this->root->createElement($name);
+		foreach($attributes as $key => $value){
+			if($value === false || $value == '') continue;
+				$this->setAttribute($element, $key, $value);
+		}
+		return $element;
 	}
 
 	/**
@@ -74,20 +83,33 @@ class ElementConstructor {
 	 */
 	public function setText($text, $element){
 		$textNode = $this->root->createTextNode($text);
-		$element->appendChild($textNode);
+		$this->append($textNode, $element);
+//		$element->appendChild($textNode);
 	}
 
 	/**
-	 * Sets attributes to element.
+	 * Sets attribute to element.
 	 *
 	 * @param object $element The target element.
-	 * @param array $attributes An array of attributes as key-value pairs. If value is false or an empty string, attribute is not set.
+	 * @param string $name Name of the attribute.
+	 * @param string $value Value of the attribute.
 	 */
-	public function setAttributes($element, $attributes){
-		foreach($attributes as $key => $value){
-			if($value === false || $value == '') continue;
-				$element->setAttribute($key, $value);
-		}
+	public function setAttribute($element, $name, $value){
+		$element->setAttribute($name, $value);
+	}
+
+	/**
+	 * Adds to element attribute's content.
+	 *
+	 * @param object $element The target element.
+	 * @param string $name Name of the attribute.
+	 * @param string $value Value to append to attribute content. Will be separated with space from existing content.
+	 */
+	public function addToAttribute($element, $name, $value){
+		$oldValue = $element->getAttribute($name);
+		if($oldValue !== '') $oldValue . ' ';
+		$oldValue .= $value;
+		$this->setAttribute($element, $name, $value);
 	}
 
 	/**
@@ -120,6 +142,7 @@ class ElementConstructor {
 	public function getParent($element){
 		return $element->parentNode;
 	}
+
 	/**
 	 * Appends an element as last child of another element.
 	 *
