@@ -26,27 +26,16 @@ class ElementConstructor {
 	 * @param string $target. Target element (div, p, etc) in the receiving ElementConstructor. Default is root.
 	 */
 	public function import($other, $target = false){
-		$nodes = $other->root->getElementsByTagName('*');
-		foreach($nodes as $node){
-			// Only import nodes that have root (#document) as their parent. This because getElementsByTagName('*') appears to duplicate elements
-			// that are not direct children document root, when there are multiple children to document root.
-			if($node->parentNode->nodeName !== '#document') continue;
-			$nodes = $this->root->importNode($node, true);
-			// If no target specified, append to root.
-			if($target === false){
-				$this->append($nodes, $this->root);
-			}
-			// If target is specified as an element in DOMDocument, attach to element.
-			else if(is_object($target)){
-				$this->append($nodes, $target);
-			}
-			// If target is specifiec as element name find the element and attach to it.
-			else {
-				$list = $this->root->getElementsByTagName($target);
-				$item = $list->item(0);
-				$this->append($nodes, $item);
-			}
+		$node = $this->root->importNode($other, true);
+		// If no target specified, append to root.
+		if($target === false){
+			$this->append($node, $this->root);
 		}
+		// If target is specified as an element in DOMDocument, attach to element.
+		else if(is_object($target)){
+			$this->append($node, $target);
+		}
+		return $node;
 	}
 
 	/**
@@ -107,9 +96,9 @@ class ElementConstructor {
 	 */
 	public function addToAttribute($element, $name, $value){
 		$oldValue = $element->getAttribute($name);
-		if($oldValue !== '') $oldValue . ' ';
+		if($oldValue != '') $oldValue .= ' ';
 		$oldValue .= $value;
-		$this->setAttribute($element, $name, $value);
+		$this->setAttribute($element, $name, $oldValue);
 	}
 
 	/**

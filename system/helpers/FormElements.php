@@ -1,6 +1,7 @@
 <?php
 
 class FormElement {
+	public $DOM;
 	public $model;
 	public $name;
 	public $displayName = '';
@@ -11,7 +12,12 @@ class FormElement {
 	public $elementOrder = [					// Default element construction order.
 		'label', 'control' , 'error'
 	];
-	public $elements = [];						// Storage for constructed form elements.
+	public $elements = [
+		'wrap' => null,
+		'label' => null,
+		'control' => null,
+		'error' => null
+	];						// Storage for constructed form elements.
 	public $labelClass = '';
 	public $elementClass = '';
 	public $wrapClass = '';
@@ -31,6 +37,7 @@ class FormElement {
 	];
 
 	public function __construct($model, $name, $options = []){
+		$this->DOM = new ElementConstructor();
 		$this->model = $model;
 		$this->name = $name;
 		if(isset($options['elementOrder'])){
@@ -61,21 +68,8 @@ class FormElement {
 	 * and returns to a string manipulator, such as an echo, it invokes this magic method to create string output.
 	 */
 	public function __toString(){
-		// If wrapper doesn't exist.
-		if(!array_key_exists('wrap', $this->elements)) $this->wrap();
-		else if($this->elements['wrap'] === false){
-			return $this->elements['control']->root->saveHTML();
-		}
-		// If label doesn't exist.
-		if(!array_key_exists('label', $this->elements)) $this->label();
-		$wrapper = $this->elements['wrap'];
-		$this->elements['wrap'] = false;
-		foreach($this->elementOrder as $order){
-			if(isset($this->elements[$order]) && $this->elements[$order] !== false){
-				$wrapper->import($this->elements[$order], 'div');
-			}
-		}
-		return $wrapper->root->saveHTML();
+		$this->combineElements();
+		return $this->DOM->getHTML();
 	}
 
 	/**
@@ -86,35 +80,55 @@ class FormElement {
 	 *
 	 * @return object Returns an ElementConstructor object.
 	 */
-	public function getDOM(){
-		$new = false;
-		// If wrapper doesn't exist.
-		if(!array_key_exists('wrap', $this->elements)){
-			$this->wrap();
-			$wrapper = $this->elements['wrap'];
+	public function getDOM($target = ''){
+		if($target !== ''){
+			return $this->elements[$target];
 		}
-		// If content is not to be wrapped, create empty container for it.
-		else if($this->elements['wrap'] === false){
-			$new = true;
-			$wrapper = new ElementConstructor();
+		return $this->combineElements();
+	}
+
+	/**
+	 * Combines elements into a single unit.
+	 */
+	public function combineElements(){
+		$parent = $this->DOM->root;
+		// If wrapper has been set to be omitted, skip.
+		if($this->elements['wrap'] !== false){
+			// If wrapper has not yet been created, create a default format wrapper.
+			if(empty($this->elements['wrap'])){
+				$this->wrap();
+			}
+			// Set as parent to attach elements to.
+			$parent = $this->DOM->import($this->elements['wrap']);
 		}
-		// Get existing wrapper.
-		else {
-			$wrapper = $this->elements['wrap'];
+		// If label has been set to be omitted, skip.
+		if($this->elements['label'] !== false){
+			// If label has not yet been created, create a default format wrapper.
+			if(empty($this->elements['label'])){
+				$this->label();
+			}
 		}
-		// If label doesn't exist.
-		if(!array_key_exists('label', $this->elements)) $this->label();
+		// If error has not been generated, omit error.
+		if($this->elements['error'] !== false){
+			if(empty($this->elements['error'])){
+				$this->elements['error'] = false;
+			}
+		}
+		// Loop through elements in creation order and combine.
 		foreach($this->elementOrder as $order){
-			if($order !== 'wrap' && isset($this->elements[$order]) && $this->elements[$order] !== false){
-				if(!$new){
-					$wrapper->import($this->elements[$order], 'div');
-				}
-				else {
-					$wrapper->import($this->elements[$order]);
+			if($this->elements[$order] !== false){
+				if($order !== 'wrap'){
+					if(is_array($this->elements[$order])){
+						foreach($this->elements[$order] as $item){
+							$this->DOM->import($item, $parent);
+						}
+					} else {
+						$this->DOM->import($this->elements[$order], $parent);
+					}
 				}
 			}
 		}
-		return $wrapper;
+		return $parent;
 	}
 
 	/**
@@ -133,8 +147,7 @@ class FormElement {
 	 */
 	public function input($type, $options = []){
 		// Create element and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('input', [
+		$element = $this->DOM->createElement('input', [
 			'type' => $type,
 			'name' => $this->name,
 			'id'=> $this->selectAttribute('id', $options, $this->name),
@@ -142,14 +155,13 @@ class FormElement {
 			'value' => $this->selectAttribute('value', $options, $this->model->{$this->name}),
 			'placeholder' => $this->selectAttribute('placeholder', $options, $this->displayName)
 		]);
-		$ECon->append($element);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
 			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $ECon->addToAttribute($element, 'class', $class);
+			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
 		}
 		// Store constructed control.
-		$this->elements['control'] = $ECon;
+		$this->elements['control'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -170,18 +182,14 @@ class FormElement {
 			return $this;
 		}
 		// Create element and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('label', [
+		$element = $this->DOM->createElement('label', [
 			'for'=> $this->selectAttribute('for', $options, $this->name),
 			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('label'))
 		]);
-		$ECon->append($element);
 		// Attach text.
-		//$innerHTML = $ECon->createText(!empty($text) ? $text : $this->displayName);
-		//$ECon->append($innerHTML, $element);
-		$ECon->setText(!empty($text) ? $text : $this->displayName, $element);
+		$this->DOM->setText(!empty($text) ? $text : $this->displayName, $element);
 		// Store constructed label.
-		$this->elements['label'] = $ECon;
+		$this->elements['label'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -199,16 +207,14 @@ class FormElement {
 		$this->elements['error'] = false;
 		$this->elements['wrap'] = false;
 		// Create element base and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('input', [
+		$element = $this->DOM->createElement('input', [
 			'type' =>'hidden',
 			'id'=> $this->selectAttribute('id', $options, $this->name),
 			'name' => $this->name,
 			'value' => $this->selectAttribute('value', $options, $this->model->{$this->name})
 		]);
-		$ECon->append($element);
 		// Store constructed control.
-		$this->elements['control'] = $ECon;
+		$this->elements['control'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -223,22 +229,20 @@ class FormElement {
 	 */
 	public function textarea($options = []){
 		// Create element and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('textarea', [
+		$element = $this->DOM->createElement('textarea', [
 			'name' => $this->name,
 			'id'=> $this->selectAttribute('id', $options, $this->name),
 			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('textarea'))
 		]);
-		$ECon->append($element);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
 			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $ECon->addToAttribute($element, 'class' , $class);
+			if(!empty($class)) $this->DOM->addToAttribute($element, 'class' , $class);
 		}
 		// Set text content.
-		$ECon->setText(html_entity_decode($this->model->{$this->name}), $element);
+		$this->DOM->setText(html_entity_decode($this->model->{$this->name}), $element);
 		// Store constructed control.
-		$this->elements['control'] = $ECon;
+		$this->elements['control'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -255,32 +259,30 @@ class FormElement {
 	 */
 	public function dropdown($content, $options = []){
 		// Create element and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('select', [
+		$element = $this->DOM->createElement('select', [
 			'name' => $this->name,
 			'id'=> $this->selectAttribute('id', $options, $this->name),
 			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('select'))
 		]);
-		if(isset($options['multiple'])) $ECon->setAttribute($element, 'multiple', 'multiple');
-		$ECon->append($element);
+		if(isset($options['multiple'])) $this->DOM->setAttribute($element, 'multiple', 'multiple');
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
 			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $ECon->addToAttribute($element, 'class', $class);
+			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
 		}
 		// Create options.
 		foreach($content as $key => $value){
-			$option = $ECon->createElement('option', ['value' => $key]);
-			$ECon->setText($value, $option);
+			$option = $this->DOM->createElement('option', ['value' => $key]);
+			$this->DOM->setText($value, $option);
 			if(is_array($this->model->{$this->name})){
-				if(in_array($key, $this->{$this->name})) $ECon->setAttribute($option, 'selected', 'selected');
+				if(in_array($key, $this->{$this->name})) $this->DOM->setAttribute($option, 'selected', 'selected');
 			} else {
-				if($this->model->{$this->name} == $key) $ECon->setAttribute($option, 'selected', 'selected');
+				if($this->model->{$this->name} == $key) $this->DOM->setAttribute($option, 'selected', 'selected');
 			}
-			$ECon->append($option, $element);
+			$this->DOM->append($option, $element);
 		}
 		// Store constructed control.
-		$this->elements['control'] = $ECon;
+		$this->elements['control'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -297,35 +299,33 @@ class FormElement {
 	 */
 	public function checkbox($options = []){
 		// Create element and append to document.
-		$ECon = new ElementConstructor();
 		$value = $this->selectAttribute('value', $options, '1');
-		$element = $ECon->createElement('input', [
+		$element = $this->DOM->createElement('input', [
 			'name' =>isset($options['grouped']) ? $this->name . '[]' : $this->name,
 			'type' => 'checkbox',
 			'value' => $value,
 			'id'=> $this->selectAttribute('id', $options, $this->name),
 			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('checkbox'))
 		]);
-		$ECon->append($element);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
 			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $ECon->addToAttribute($element, 'class', $class);
+			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
 		}
 		// Checked state.
 		if(is_array($this->model->{$this->name})){
-			if(in_array($value, $this->model->{$this->name})) $ECon->setAttribute($element, 'checked', 'checked');
+			if(in_array($value, $this->model->{$this->name})) $this->DOM->setAttribute($element, 'checked', 'checked');
 		} else {
-			if($this->model->{$this->name} == $value) $ECon->setAttribute($element,'checked', 'checked');
+			if($this->model->{$this->name} == $value) $this->DOM->setAttribute($element,'checked', 'checked');
 		}
 		// Create unchecked hidden value's element.
 		if(isset($options['unchecked'])){
 			$form = new Form();
-			$hidden = $form->using($this->model, $this->name)->hidden(['value' => $options['unchecked']])->getDOM();
-			$ECon->import($hidden);
+			$hidden = $form->using($this->model, $this->name)->hidden(['value' => $options['unchecked']])->getDOM('control');
+			$this->DOM->import($hidden);
 		}
 		// Store constructed control.
-		$this->elements['control'] = $ECon;
+		$this->elements['control'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -343,7 +343,6 @@ class FormElement {
 	 */
 	public function checkboxGroup($list, $options = []){
 		// Create container for all checkboxes.
-		$ECon = new ElementConstructor();
 		$this->elements['label'] = false;
 		// Loop through checkbox content.
 		foreach($list as $key => $value){
@@ -357,10 +356,9 @@ class FormElement {
 				->label($value, ['for' => $id, 'class' => $this->selectAttribute('labelClass', $options, $this->getDefaultClass('checkLabel'))])
 				->wrap(['class' => $this->selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))])
 				->getDOM();
-			$ECon->import($checkbox);
+			// Store constructed control.
+			$this->elements['control'][] = $checkbox;
 		}
-		// Store constructed control.
-		$this->elements['control'] = $ECon;
 		// Return object to method chain.
 		return $this;
 	}
@@ -377,39 +375,40 @@ class FormElement {
 	 */
 	public function radio($list, $options = []){
 		// Create container for all radios.
-		$ECon = new ElementConstructor();
 		$this->elements['label'] = false;
 		// Loop through radio content.
 		foreach($list as $key => $value){
 			// Div container for radio and label.
-			$div = $ECon->createElement('div', [
-				['class' => $this->selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))]
-			]);
-			$ECon->append($div);
+			$div = $this->DOM->createElement('div',	['class' => $this->selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))]);
 			// Radio element.
 			$id = $this->name . '_' . $key;
-			$element = $ECon->createElement('input', [
+			$element = $this->DOM->createElement('input', [
 				'name' => $this->name,
 				'type' => 'radio',
 				'value' => $key,
 				'id'=> $id,
 				'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('radio'))
 			]);
-			$ECon->append($element, $div);
+			// Selected state.
+			if($this->model->{$this->name} == $key) $this->DOM->setAttribute($element, 'checked', 'checked');
+			$this->DOM->append($element, $div);
 			// On error, add error class if error classes are enabled.
 			if($this->hasError && $this->errorClasses){
 				$class = $this->getDefaultClass('error');
-				if(!empty($class)) $ECon->addToAttribute($element, 'class', $class);
+				if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
 			}
 			// Label element.
 			$form = new Form();
 			$label = $form->using($this->model, $this->name, ['noErrorMessage' => true])
 				->label($value, ['for' => $id, 'class' => $this->selectAttribute('labelClass', $options, $this->getDefaultClass('checkLabel'))])
-				->wrap(['noWrap' => true])->getDOM();
-			$ECon->import($label, $div);
-			if($key == array_key_last($list)) $ECon->import($this->elements['error'], $div);
+				->wrap(['noWrap' => true])->getDOM('label');
+			$this->DOM->import($label, $div);
+			if($key == array_key_last($list) && $this->hasError){
+				$this->DOM->append($this->elements['error'], $div);
+			}
+			$this->elements['control'][] = $div;
 		}
-		$this->elements['control'] = $ECon;
+		$this->elements['error'] = false;
 		// Return object to method chain.
 		return $this;
 	}
@@ -427,12 +426,10 @@ class FormElement {
 			return $this;
 		}
 		// Create element base and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('div', [
+		$element = $this->DOM->createElement('div', [
 			'class' => $this->selectAttribute('class', $options, '')
 		]);
-		$ECon->append($element);
-		$this->elements['wrap'] = $ECon;
+		$this->elements['wrap'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -451,8 +448,7 @@ class FormElement {
 	 */
 	public function range($options = []){
 		// Create element and append to document.
-		$ECon = new ElementConstructor();
-		$element = $ECon->createElement('input', [
+		$element = $this->DOM->createElement('input', [
 			'type' => 'range',
 			'name' => $this->name,
 			'id'=> $this->selectAttribute('id', $options, $this->name),
@@ -462,14 +458,13 @@ class FormElement {
 			'max' => $this->selectAttribute('max', $options),
 			'step' => $this->selectAttribute('step', $options)
 		]);
-		$ECon->append($element);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
 			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $ECon->addToAttribute($element, 'class', $class);
+			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
 		}
 		// Store constructed control.
-		$this->elements['control'] = $ECon;
+		$this->elements['control'] = $element;
 		// Return object to method chain.
 		return $this;
 	}
@@ -481,11 +476,9 @@ class FormElement {
 	 */
 	public function error($error){
 		if($this->errorMessages === false) return;
-		$ECon = new ElementConstructor();
-		$div = $ECon->createElement('div', [['class' => $this->getDefaultClass('errorDiv')]]);
-		$ECon->append($div);
-		$ECon->setText($error, $div);
-		$this->elements['error'] = $ECon;
+		$div = $this->DOM->createElement('div', ['class' => $this->getDefaultClass('errorDiv')]);
+		$this->DOM->setText($error, $div);
+		$this->elements['error'] = $div;
 	}
 
 	/**
