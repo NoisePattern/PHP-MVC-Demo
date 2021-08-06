@@ -12,16 +12,13 @@ class FormElement {
 	public $elementOrder = [					// Default element construction order.
 		'label', 'control' , 'error'
 	];
-	public $elements = [
-		'wrap' => null,
-		'label' => null,
-		'control' => null,
-		'error' => null
-	];						// Storage for constructed form elements.
-	public $labelClass = '';
-	public $elementClass = '';
-	public $wrapClass = '';
-	public $hidden = false;						// Creating a hidden element. This omits other output except the element itself.
+	public $elements = [						// Storage for constructed form elements.
+		'wrap' => '',
+		'label' => '',
+		'control' => '',
+		'error' => ''
+	];
+	public $wrapAttributes = [];
 	public $elementDefaultClass = [				// Class attribute values required by by various HTML elements, as mandated by Bootstrap v5.
 		'input' => 'form-control',				// Class required by input element of type text, email or password.
 		'label' => 'form-label',				// Class required by label element.
@@ -31,6 +28,7 @@ class FormElement {
 		'checkbox' => 'form-check-input',		// Class required by checkbox element.
 		'range' => 'form-range',				// Class required by range element.
 		'radio' => 'form-check-input',			// Class required by radio element.
+		'button' => 'btn btn-primary',			// Class required by button element.
 		'error' => 'is-invalid',				// Class required by any element with error.
 		'checkDiv' => 'form-check',				// Class required by div wrapping a checkbox.
 		'errorDiv' => 'invalid-feedback'		// Class required by div wrapping an error message.
@@ -68,22 +66,6 @@ class FormElement {
 	 * and returns to a string manipulator, such as an echo, it invokes this magic method to create string output.
 	 */
 	public function __toString(){
-		$this->combineElements();
-		return $this->DOM->getHTML();
-	}
-
-	/**
-	 * Combines elements into a single unit, putting label, control and error elements inside the wrapper element, and returns
-	 * the result as ElementConstructor object, which contains the elements as a DOMDocument. This allows for injectint the elements
-	 * in any spot on other ElementConstructor objects, which wouldn't be possible if results were passed around as HTML strings.
-	 * Note: the method does not return $this, so __toString cannot be invoked, and the method must be called last in method chain.
-	 *
-	 * @return object Returns an ElementConstructor object.
-	 */
-	public function getDOM($target = ''){
-		if($target !== ''){
-			return $this->elements[$target];
-		}
 		return $this->combineElements();
 	}
 
@@ -91,44 +73,24 @@ class FormElement {
 	 * Combines elements into a single unit.
 	 */
 	public function combineElements(){
-		$parent = $this->DOM->root;
-		// If wrapper has been set to be omitted, skip.
-		if($this->elements['wrap'] !== false){
-			// If wrapper has not yet been created, create a default format wrapper.
-			if(empty($this->elements['wrap'])){
-				$this->wrap();
-			}
-			// Set as parent to attach elements to.
-			$parent = $this->DOM->import($this->elements['wrap']);
-		}
 		// If label has been set to be omitted, skip.
 		if($this->elements['label'] !== false){
 			// If label has not yet been created, create a default format wrapper.
-			if(empty($this->elements['label'])){
-				$this->label();
+			if($this->elements['label'] === ''){
+				$this->elements['label'] = Html::label($this->displayName, $this->name, ['class' => $this->getDefaultClass('label')]);
 			}
 		}
-		// If error has not been generated, omit error.
-		if($this->elements['error'] !== false){
-			if(empty($this->elements['error'])){
-				$this->elements['error'] = false;
-			}
-		}
-		// Loop through elements in creation order and combine.
+		$html = '';
 		foreach($this->elementOrder as $order){
-			if($this->elements[$order] !== false){
-				if($order !== 'wrap'){
-					if(is_array($this->elements[$order])){
-						foreach($this->elements[$order] as $item){
-							$this->DOM->import($item, $parent);
-						}
-					} else {
-						$this->DOM->import($this->elements[$order], $parent);
-					}
-				}
+			if($this->elements[$order] !== false && $order !== 'wrap'){
+				$html .=$this->elements[$order];
 			}
 		}
-		return $parent;
+		// If wrapper has been set to be omitted, skip.
+		if($this->elements['wrap'] !== false){
+			$html = Html::div('', $html, $this->wrapAttributes);
+		}
+		return $html;
 	}
 
 	/**
@@ -146,22 +108,23 @@ class FormElement {
 	 * @return object Returns object back to method chain.
 	 */
 	public function input($type, $options = []){
-		// Create element and append to document.
-		$element = $this->DOM->createElement('input', [
-			'type' => $type,
-			'name' => $this->name,
-			'id'=> $this->selectAttribute('id', $options, $this->name),
-			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('input')),
-			'value' => $this->selectAttribute('value', $options, $this->model->{$this->name}),
-			'placeholder' => $this->selectAttribute('placeholder', $options, $this->displayName)
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'id' => $this->name,
+			'class' => $this->getDefaultClass('input'),
+			'placeholder' => $this->displayName
 		]);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
-			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
+			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
 		}
-		// Store constructed control.
-		$this->elements['control'] = $element;
+		// Create and store the element.
+		$this->elements['control'] = Html::input(
+			$type,
+			$this->name,
+			Html::selectAttribute('value', $options, $this->model->{$this->name}),
+			$options
+		);
 		// Return object to method chain.
 		return $this;
 	}
@@ -181,15 +144,13 @@ class FormElement {
 			$this->elements['label'] = false;
 			return $this;
 		}
-		// Create element and append to document.
-		$element = $this->DOM->createElement('label', [
-			'for'=> $this->selectAttribute('for', $options, $this->name),
-			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('label'))
-		]);
-		// Attach text.
-		$this->DOM->setText(!empty($text) ? $text : $this->displayName, $element);
-		// Store constructed label.
-		$this->elements['label'] = $element;
+		Html::setAttribute($options, ['class' => $this->getDefaultClass('label')]);
+		// Create and store the element.
+		$this->elements['label'] = Html::label(
+			!$text === '' ? $text : $this->displayName,
+			Html::selectAttribute('for', $options, $this->name),
+			$options
+		);
 		// Return object to method chain.
 		return $this;
 	}
@@ -206,15 +167,15 @@ class FormElement {
 		$this->elements['label'] = false;
 		$this->elements['error'] = false;
 		$this->elements['wrap'] = false;
-		// Create element base and append to document.
-		$element = $this->DOM->createElement('input', [
-			'type' =>'hidden',
-			'id'=> $this->selectAttribute('id', $options, $this->name),
-			'name' => $this->name,
-			'value' => $this->selectAttribute('value', $options, $this->model->{$this->name})
-		]);
-		// Store constructed control.
-		$this->elements['control'] = $element;
+		// Set default attributes.
+		Html::setAttribute($options, ['id' => $this->name]);
+		// Create and store the element.
+		$this->elements['control'] = Html::input(
+			'hidden',
+			$this->name,
+			Html::selectAttribute('value', $options, $this->model->{$this->name}),
+			$options
+		);
 		// Return object to method chain.
 		return $this;
 	}
@@ -228,61 +189,52 @@ class FormElement {
 	 * @return object Returns object back to method chain.
 	 */
 	public function textarea($options = []){
-		// Create element and append to document.
-		$element = $this->DOM->createElement('textarea', [
-			'name' => $this->name,
-			'id'=> $this->selectAttribute('id', $options, $this->name),
-			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('textarea'))
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'id' => $this->name,
+			'class' => $this->getDefaultClass('input')
 		]);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
-			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $this->DOM->addToAttribute($element, 'class' , $class);
+			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
 		}
-		// Set text content.
-		$this->DOM->setText(html_entity_decode($this->model->{$this->name}), $element);
-		// Store constructed control.
-		$this->elements['control'] = $element;
+		// Create and store the element.
+		$this->elements['control'] = Html::textarea(
+			html_entity_decode($this->model->{$this->name}),
+			$this->name,
+			$options
+		);
 		// Return object to method chain.
 		return $this;
 	}
 
 	/**
-	 * Creates a dropdown element. The model contains the selected value, either as a single value or as an array, while the method receives a key-value list of dropdown content.
+	 * Creates a select element. The model contains the selected value, either as a single value or as an array, while the method receives a key-value list of select content.
 	 *
-	 * @param array $content An associative array of key-value pairs populate dropdown options.
+	 * @param array $content An array of key-value pairs to populate select options.
 	 * @param array $options Array of options as key-value pairs to format the element. Supported keys:
 	 * - id: Sets custom id attribute to element. Default value is name from model. If set, must also be set as label's for-attribute.
 	 * - class: Sets custom class value to element. Default value is 'form-select' if defaults are in use, none otherwise.
-	 * - multiple: When set to true, dropdown is made multiselect.
+	 * - multiple: When set to true, select is made multiselect.
 	 * @return object Returns object back to method chain.
 	 */
-	public function dropdown($content, $options = []){
-		// Create element and append to document.
-		$element = $this->DOM->createElement('select', [
-			'name' => $this->name,
-			'id'=> $this->selectAttribute('id', $options, $this->name),
-			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('select'))
+	public function select($content, $options = []){
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'id' => $this->name,
+			'class' => $this->getDefaultClass('select')
 		]);
-		if(isset($options['multiple'])) $this->DOM->setAttribute($element, 'multiple', 'multiple');
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
-			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
+			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
 		}
-		// Create options.
-		foreach($content as $key => $value){
-			$option = $this->DOM->createElement('option', ['value' => $key]);
-			$this->DOM->setText($value, $option);
-			if(is_array($this->model->{$this->name})){
-				if(in_array($key, $this->{$this->name})) $this->DOM->setAttribute($option, 'selected', 'selected');
-			} else {
-				if($this->model->{$this->name} == $key) $this->DOM->setAttribute($option, 'selected', 'selected');
-			}
-			$this->DOM->append($option, $element);
-		}
-		// Store constructed control.
-		$this->elements['control'] = $element;
+		// Create and store the element.
+		$this->elements['control'] = Html::select(
+			$content,
+			$this->model->{$this->name},
+			$this->name,
+			$options
+		);
 		// Return object to method chain.
 		return $this;
 	}
@@ -298,34 +250,30 @@ class FormElement {
 	 * - grouped: Is set, checkbox is selecting from a group of options so [] is added to element name.
 	 */
 	public function checkbox($options = []){
-		// Create element and append to document.
-		$value = $this->selectAttribute('value', $options, '1');
-		$element = $this->DOM->createElement('input', [
-			'name' =>isset($options['grouped']) ? $this->name . '[]' : $this->name,
-			'type' => 'checkbox',
-			'value' => $value,
-			'id'=> $this->selectAttribute('id', $options, $this->name),
-			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('checkbox'))
+		$value = Html::selectAttribute('value', $options, '1');
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'id' => $this->name,
+			'class' => $this->getDefaultClass('checkbox'),
 		]);
+		// Checked state.
+		if($this->checkModelValue($value, $this->name)) Html::setAttribute($options, ['checked' => 'checked']);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
-			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
-		}
-		// Checked state.
-		if(is_array($this->model->{$this->name})){
-			if(in_array($value, $this->model->{$this->name})) $this->DOM->setAttribute($element, 'checked', 'checked');
-		} else {
-			if($this->model->{$this->name} == $value) $this->DOM->setAttribute($element,'checked', 'checked');
+			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
 		}
 		// Create unchecked hidden value's element.
+		$hidden = '';
 		if(isset($options['unchecked'])){
-			$form = new Form();
-			$hidden = $form->using($this->model, $this->name)->hidden(['value' => $options['unchecked']])->getDOM('control');
-			$this->DOM->import($hidden);
+			$hidden = Html::input('hidden', $this->name, $options['unchecked']);
+			unset($options['unchecked']);
 		}
-		// Store constructed control.
-		$this->elements['control'] = $element;
+		// Create and store the element.
+		$this->elements['control'] = Html::checkbox(
+			$this->name,
+			$value,
+			$options
+		) . $hidden;
 		// Return object to method chain.
 		return $this;
 	}
@@ -342,29 +290,32 @@ class FormElement {
 	 * @return object Returns object back to method chain.
 	 */
 	public function checkboxGroup($list, $options = []){
-		// Create container for all checkboxes.
-		$this->elements['label'] = false;
-		// Loop through checkbox content.
+		$group = '';
+		// Loop through content.
 		foreach($list as $key => $value){
-			$form = new Form();
+			// Create checkbox.
 			$id = $this->name . '_' . $key;
-			$options = ['elementOrder' => ['control','label','error']];
-			// Suppress error divs on all but the last checkbox.
-			if($key != array_key_last($list)) $options['noErrorMessage'] = true;
-			$checkbox = $form->using($this->model, $this->name, $options)
-				->checkbox(['id' => $id, 'value' => $key, 'grouped' => true, 'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('checkbox'))])
-				->label($value, ['for' => $id, 'class' => $this->selectAttribute('labelClass', $options, $this->getDefaultClass('checkLabel'))])
-				->wrap(['class' => $this->selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))])
-				->getDOM();
-			// Store constructed control.
-			$this->elements['control'][] = $checkbox;
+			$elementOptions = [
+				'id' => $id,
+				'class' => Html::selectAttribute('class', $options, $this->getDefaultClass('checkbox'))
+			];
+			if($this->checkModelValue($key, $this->name)) $elementOptions['checked'] = 'checked';
+			$checkbox = Html::checkbox($this->name . '[]', $key, $elementOptions);
+			// Create label.
+			$labelOptions = ['class' => Html::selectAttribute('labelClass', $options, $this->getDefaultClass('checkLabel'))];
+			$label = Html::label($value, $id, $labelOptions);
+			// Create and fill div wrapper.
+			$div = Html::div('', $checkbox . $label, ['class' => Html::selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))]);
+			$group .= $div;
 		}
+		// Store element group.
+		$this->elements['control'] = $group;
 		// Return object to method chain.
 		return $this;
 	}
 
 	/**
-	 * Creates radio buttons. If any of the keys in given list of radios matches the value in model, it is set selected.
+	 * Creates multiple radios. Model supplies the value that is set selected.
 	 *
 	 * @param array $list Array from which array keys are used as radio values, and array values are used as radio label texts.
 	 * @param array $options Array of options as key-value pairs to format the element. Supported keys:
@@ -373,42 +324,27 @@ class FormElement {
 	 * - wrapClass: Sets custom class to div that wraps radio and label. Default is 'form-check' if defaults are in use, none otherwise.
 	 * @return object Returns object back to method chain.
 	 */
-	public function radio($list, $options = []){
-		// Create container for all radios.
-		$this->elements['label'] = false;
-		// Loop through radio content.
+	public function radioGroup($list, $options = []){
+		$group = '';
+		// Loop through content.
 		foreach($list as $key => $value){
-			// Div container for radio and label.
-			$div = $this->DOM->createElement('div',	['class' => $this->selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))]);
-			// Radio element.
+			// Create radio.
 			$id = $this->name . '_' . $key;
-			$element = $this->DOM->createElement('input', [
-				'name' => $this->name,
-				'type' => 'radio',
-				'value' => $key,
-				'id'=> $id,
-				'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('radio'))
-			]);
-			// Selected state.
-			if($this->model->{$this->name} == $key) $this->DOM->setAttribute($element, 'checked', 'checked');
-			$this->DOM->append($element, $div);
-			// On error, add error class if error classes are enabled.
-			if($this->hasError && $this->errorClasses){
-				$class = $this->getDefaultClass('error');
-				if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
-			}
-			// Label element.
-			$form = new Form();
-			$label = $form->using($this->model, $this->name, ['noErrorMessage' => true])
-				->label($value, ['for' => $id, 'class' => $this->selectAttribute('labelClass', $options, $this->getDefaultClass('checkLabel'))])
-				->wrap(['noWrap' => true])->getDOM('label');
-			$this->DOM->import($label, $div);
-			if($key == array_key_last($list) && $this->hasError){
-				$this->DOM->append($this->elements['error'], $div);
-			}
-			$this->elements['control'][] = $div;
+			$elementOptions = [
+				'id' => $id,
+				'class' => Html::selectAttribute('class', $options, $this->getDefaultClass('radio'))
+			];
+			if($this->checkModelValue($key, $this->name)) $elementOptions['checked'] = 'checked';
+			$radio = Html::radio($this->name . '[]', $key, $elementOptions);
+			// Create label.
+			$labelOptions = ['class' => Html::selectAttribute('labelClass', $options, $this->getDefaultClass('checkLabel'))];
+			$label = Html::label($value, $id, $labelOptions);
+			// Create and fill div wrapper.
+			$div = Html::div('', $radio . $label, ['class' => Html::selectAttribute('wrapClass', $options, $this->getDefaultClass('checkDiv'))]);
+			$group .= $div;
 		}
-		$this->elements['error'] = false;
+		// Store element group.
+		$this->elements['control'] = $group;
 		// Return object to method chain.
 		return $this;
 	}
@@ -425,12 +361,7 @@ class FormElement {
 			$this->elements['wrap'] = false;
 			return $this;
 		}
-		// Create element base and append to document.
-		$element = $this->DOM->createElement('div', [
-			'class' => $this->selectAttribute('class', $options, '')
-		]);
-		$this->elements['wrap'] = $element;
-		// Return object to method chain.
+		$this->wrapAttributes = $options;
 		return $this;
 	}
 
@@ -447,24 +378,43 @@ class FormElement {
 	 * @return object Returns object back to method chain.
 	 */
 	public function range($options = []){
-		// Create element and append to document.
-		$element = $this->DOM->createElement('input', [
-			'type' => 'range',
-			'name' => $this->name,
-			'id'=> $this->selectAttribute('id', $options, $this->name),
-			'class' => $this->selectAttribute('class', $options, $this->getDefaultClass('range')),
-			'value' => $this->selectAttribute('value', $options, $this->model->{$this->name}),
-			'min' => $this->selectAttribute('min', $options),
-			'max' => $this->selectAttribute('max', $options),
-			'step' => $this->selectAttribute('step', $options)
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'id' => $this->name,
+			'class' => $this->getDefaultClass('range')
 		]);
 		// On error, add error class if error classes are enabled.
 		if($this->hasError && $this->errorClasses){
-			$class = $this->getDefaultClass('error');
-			if(!empty($class)) $this->DOM->addToAttribute($element, 'class', $class);
+			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
 		}
-		// Store constructed control.
-		$this->elements['control'] = $element;
+		// Create and store the element.
+		$this->elements['control'] = Html::range(
+			$this->name,
+			Html::selectAttribute('value', $options, $this->model->{$this->name}),
+			$options
+		);
+		// Return object to method chain.
+		return $this;
+	}
+
+	/**
+	 * Creates a button element.
+	 *
+	 * @param string $type Type of button element.
+	 * @param string $text Text displayed on the button.
+	 * @param array $options Array of options as key-value pairs to format the element.
+	 */
+	public function button($type, $text, $options = []){
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'class' => $this->getDefaultClass('button')
+		]);
+		// Create and store the element.
+		$this->elements['control'] = Html::button(
+			$type,
+			$text,
+			$options
+		);
 		// Return object to method chain.
 		return $this;
 	}
@@ -475,10 +425,8 @@ class FormElement {
 	 * @param string $error The error text to display.
 	 */
 	public function error($error){
-		if($this->errorMessages === false) return;
-		$div = $this->DOM->createElement('div', ['class' => $this->getDefaultClass('errorDiv')]);
-		$this->DOM->setText($error, $div);
-		$this->elements['error'] = $div;
+		$options = ['class' => $this->getDefaultClass('errorDiv')];
+		$this->elements['error'] = Html::div($error, '', $options);
 	}
 
 	/**
@@ -487,7 +435,7 @@ class FormElement {
 	 * @param string $attribute name of the attribute.
 	 * @param array $options Element options array possibly containing a custom setting.
 	 * @param string $default Default value to use if no option has been set.
-	 * @return string|boolean Returns selected value or false if: option is set false, or neither option or default has value.
+	 * @return string|bool Returns selected value or false if: option is set false, or neither option or default has value.
 	 */
 	public function selectAttribute($attribute, $custom, $default = ''){
 		if(isset($custom[$attribute]) && $custom[$attribute] !== false){
@@ -499,6 +447,22 @@ class FormElement {
 		return false;
 	}
 
+	/**
+	 * Checks if value in model equals given value. Can also test array values.
+	 *
+	 * @param mixed $value Value to test for.
+	 * @param string $name Name in the model.
+	 * @return bool Returns true if match, otherwise, returns false.
+	 */
+	public function checkModelValue($value, $name){
+		if(is_array($this->model->{$name})){
+			if(in_array($value, $this->model->{$name})) return true;
+			return false;
+		} else {
+			if($value == $this->model->{$name}) return true;
+			return false;
+		}
+	}
 	/**
 	 * Gets required class of given type.
 	 *

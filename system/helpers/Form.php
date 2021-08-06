@@ -47,35 +47,8 @@ class Form {
 	 * - noErrorMessage: If set, error message elements are omitted. This is useful when grouping elements and a common error message is inserted to non-standard position.
 	 * @return object Returns FormElement object, the HTML result can be echoed due to __toString() magic method in the object.
 	 */
-	public function using($model, $name, $options = []){
+	public function using($model = '', $name = '', $options = []){
 		return new FormElement($model, $name, $options);
-	}
-
-	/**
-	 * Creates HTML button element.
-	 *
-	 * @param string $text Text displayed on the button.
-	 * @param string $type Button's type attribute. Defaults to 'button'.
-	 * @param array $custom Customization rules for the element:
-	 * 				'divClass' => string		Sets a class attribute to div wrapper. Set to false to omit div wrapping.
-	 * 				'elementClass' => string	Sets a class attribute to button element. Uses 'btn btn-primary' if this is not set.
-	 * @return string Returns a button element.
-	 */
-	public function button($text, $type = 'button', $custom = []){
-		// Construct button.
-		$elementClass = isset($custom['elementClass']) ? $custom['elementClass'] : 'btn btn-primary';
-		$button = '<button type="' . $type . '" class="' . $elementClass . '">' . $text . '</button>';
-		// Div wrapping.
-		if(isset($custom['divClass']) && $custom['divClass'] !== false){
-			// Opening div.
-			$start = array_key_exists('divClass', $custom) ? '<div class="' . $custom['divClass'] . '">' : '<div>';
-			// Closing div.
-			$end = '</div>';
-			$button = $start . $button . $end;
-		} else {
-			$button = '<div>' . $button . '</div>';
-		}
-		return $button;
 	}
 }
 ?>

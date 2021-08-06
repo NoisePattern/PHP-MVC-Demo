@@ -1,7 +1,10 @@
 <?php
 
+/**
+ * ElementConstructor class creates an interface to DOMDocument that eases its use in creation of HTML elements.
+ */
 class ElementConstructor {
-	public $root;
+	private $root;
 
 	public function __construct(){
 		$this->root = new DOMDocument('1.0', 'UTF-8');
@@ -14,8 +17,7 @@ class ElementConstructor {
 	 */
 	public function getHTML(){
 		$html = $this->root->saveHTML();
-		// Clear the document by creating an empty one.
-		//$this->root = new DOMDocument('1.0', 'UTF-8');
+		$this->root = new DOMDocument('1.0', 'UTF-8');
 		return $html;
 	}
 
@@ -29,7 +31,7 @@ class ElementConstructor {
 		$node = $this->root->importNode($other, true);
 		// If no target specified, append to root.
 		if($target === false){
-			$this->append($node, $this->root);
+			$this->append($node);
 		}
 		// If target is specified as an element in DOMDocument, attach to element.
 		else if(is_object($target)){
@@ -42,14 +44,18 @@ class ElementConstructor {
 	 * Creates a new element. It must be appended to DOM.
 	 *
 	 * @param string $name The created element's name.
-	 * @param array $attributes Attributes to be added to element as key-value pairs.
-	 * @return object Returns the created element.
+	 * @param array $attributes Attributes to be added to element as key-value pairs. If value is false or empty string, the attribute is not set.
+	 * @param object $append The created element is appended to this element.
+	 * @return object Returns the created element as DOMNode object.
 	 */
-	public function createElement($name, $attributes = []){
+	public function createElement($name, $attributes = [], $append = false){
 		$element = $this->root->createElement($name);
 		foreach($attributes as $key => $value){
-			if($value === false || $value == '') continue;
+			if($value === false || $value === '') continue;
 				$this->setAttribute($element, $key, $value);
+		}
+		if($append !== false){
+			$this->append($element, $append);
 		}
 		return $element;
 	}
@@ -73,7 +79,23 @@ class ElementConstructor {
 	public function setText($text, $element){
 		$textNode = $this->root->createTextNode($text);
 		$this->append($textNode, $element);
-//		$element->appendChild($textNode);
+	}
+
+	/**
+	 * Sets HTML content inside an element. Use instead of setText because text insertions do character escaping.
+	 *
+	 * @param string $html HTML to insert as a string.
+	 * @param object $element The target element. If not set, target is root.
+	 */
+	public function setHtml($html, $element = false){
+		$insert = new DOMDocument('1.0', 'UTF-8');
+		$insert->loadHTML($html);
+		// Note: loadHTML forces content inside <html><body> container. Using libXML constants to remove them usually
+		// causes it to also reorder / break loaded HTML so they're not useful. The added containers are removed by
+		// looping through the content that is wanted for import and importing it piece by piece.
+		foreach ($insert->getElementsByTagName('body')->item(0)->childNodes as $node){
+			$this->import($node, $element);
+		}
 	}
 
 	/**
@@ -139,7 +161,7 @@ class ElementConstructor {
 	 * @param object $parent The element that appends the other element as last child. If not given, target is root.
 	 */
 	public function append($child, $parent = false){
-		if($parent === false){
+		if($parent === false || $parent === ''){
 			$this->root->appendChild($child);
 		} else {
 			$parent->appendChild($child);

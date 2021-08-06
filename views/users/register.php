@@ -3,11 +3,11 @@
 
 $form = new Form();
 echo $form->openForm('', "POST", ['novalidate' => true]);
-echo $form->using($model, 'username')->input('text')->label()->wrap(['class' => 'mb-3']);
-echo $form->using($model, 'email')->input('email')->label()->wrap(['class' => 'mb-3']);
-echo $form->using($model, 'password')->input('password')->label()->wrap(['class' => 'mb-3']);
-echo $form->using($model, 'confirmPassword')->input('password')->label()->wrap(['class' => 'mb-3']);
-echo $form->button('Register', 'submit');
+echo $form->using($model, 'username')->input('text')->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'email')->input('email')->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'password')->input('password')->wrap(['class' => 'mb-3']);
+echo $form->using($model, 'confirmPassword')->input('password')->wrap(['class' => 'mb-3']);
+echo $form->using()->button('submit', 'Submit');
 echo $form->closeForm();
 
 ?>

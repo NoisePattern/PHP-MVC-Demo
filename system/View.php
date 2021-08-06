@@ -1,5 +1,6 @@
 <?php
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'ElementConstructor.php');
+require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Html.php');
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Form.php');
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'FormElements.php');
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Table.php');

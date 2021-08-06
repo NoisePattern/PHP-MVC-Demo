@@ -2,8 +2,8 @@
 <?php
 $form = new Form();
 echo $form->openForm('', 'POST', ['class' => 'row']);
-echo $form->using($userModel, 'selectedUser')->dropdown($dropdownContent)->label(false)->wrap(['class' => 'col-md-6']);
-echo $form->button('Select user', 'submit', ['divClass' => 'col-md-6']);
+echo $form->using($userModel, 'selectedUser')->select($dropdownContent)->label(false)->wrap(['class' => 'col-md-6']);
+echo $form->using()->button('submit', 'Submit')->wrap(['class' => 'col-md-6']);
 echo $form->closeForm();
 
 echo '<br><br>';
