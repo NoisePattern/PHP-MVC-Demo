@@ -1,64 +1,74 @@
 <?php
 
-class Table {
-
-	public $columns = [];
+class Table extends HtmlHelper {
 	public $model;
+	public $columns = [];
 	public $rowData;
+	public $useDefaults = true;
+	public $elementDefaultClass = [				// Class attribute values required by by various HTML elements, as mandated by Bootstrap v5.
+		'table' => 'table',						// Class required by table element.
+		'buttonLink' => 'btn btn-primary'		// Class required by button element.
+	];
+
+	/**
+	 * Sets up table data.
+	 *
+	 * @param array $columns An array of rules describing what each column has to display. See rules detailed at top.
+	 * @param object $model Model the data is based on. Empty if not based on model.
+	 * @param array $row-data An array containing data to be displayed on the table.
+	 */
+	public function __construct( $model, $columns, $rowData, $useDefaults = true){
+		$this->model = $model;
+		$this->columns = $columns;
+		$this->rowData = $rowData;
+		$this->useDefaults = $useDefaults;
+	}
 
 	/**
 	 * Creates HTML to open a table.
 	 *
-	 * @param array $columns An array of rules describing what each column has to display. There's separate rules for the table head and table body.
-	 * @param object $model Model the data is based on. Empty if not based on model.
-	 * @param array $row-data An array containing data to be displayed on the table.
+	 * @param array $tableOptions An array of attributes as key-value pairs to format the table element.
+	 * @param array $headRowOptions An array containing attributes as key-value pairs for thead's row element.
+	 * @param array $headCellOptions An array containing attributes as key-value pairs for thead's th elements.
+	 * @param array $bodyRowOptions An array containing attributes as key-value pairs for tbody's row elements.
+	 * @param array $bodyCellOptions An array containing attributes as key-value pairs for tbody's td elements.
+	 * @return string Returns a HTML table.
 	 */
-	public function openTable($columns, $model, $rowData){
-		$this->columns = $columns;
-		$this->model = $model;
-		$this->rowData = $rowData;
-		return '<table class="table">';
-	}
-
-	/**
-	 * Creates HTML for table head section.
-	 */
-	public function tableHead(){
-		$row = '<thead><tr>';
+	public function createTable($tableOptions = [], $headRowOptions = [], $headCellOptions = [], $bodyRowOptions = [], $bodyCellOptions = []){
+		Html::setAttribute($tableOptions, ['class' => $this->getDefaultClass('table')]);
+		// Loop through rules of each column and construct table head.
+		$head = '';
 		foreach($this->columns as $column){
-			// If column is not an array, it refers to a model field.
+			// If rule is not an array, it is a string specifying a model value to show.
 			if(!is_array($column)){
 				$name = $this->model->getLabel($column);
-				$row .= '<th scope="col">' . $name . '</th>';
+				$cell = Html::th($name, $headCellOptions);
 			} else {
-				// If array has key 'columnLabel' it is a displayable label.
+				// Key 'columnLabel' indicates text to be shown.
 				if(array_key_exists('columnLabel', $column)){
-					$row .= '<th scope="col">' . $column['columnLabel'] . '</th>';
+					$cell = Html::th($column['columnLabel'], $headCellOptions);
 				}
-				// If array has key 'field' it refers to a model field.
+				// Key 'field' indicates model field's displayable name to be shown.
 				else if(array_key_exists('field', $column)){
 					$name = $this->model->getLabel($column['field']);
-					$row .= '<th scope="col">' . $name . '</th>';
+					$cell = Html::th($name, $headCellOptions);
 				}
 			}
+			$head .= $cell;
 		}
-		$row .= '</tr></thead><tbody>';
-		return $row;
-	}
+		$head = Html::tr($head, $headRowOptions);
+		$head = Html::thead($head);
 
-	/**
-	 * Creates HTML for table rows.
-	 */
-	public function tableRows($start = 0, $number = 0){
-		$row = '';
+		// Loop throught rules of each column and construct table body.
+		$body = '';
 		$size = sizeof($this->rowData);
-		$end = $number === 0 ? $size : min($start + $number - 1, $size);
-		for($i = $start; $i < $end; $i++){
-			$row .= '<tr>';
+		for($i = 0; $i < $size; $i++){
+			$row = '';
 			foreach($this->columns as $column){
 				// If column is not an array, it refers to a model field.
 				if(!is_array($column)){
-					$row .= '<td class="align-middle">' . $this->rowData[$i][$column] . '</td>';
+					$row .= Html::td($this->rowData[$i][$column], $bodyCellOptions);
+//					$row .= '<td class="align-middle">' . $this->rowData[$i][$column] . '</td>';
 				} else {
 					// If array has key 'field' it refers to a model field.
 					if(array_key_exists('field', $column)){
@@ -88,29 +98,34 @@ class Table {
 								}
 							}
 						}
-						$row .= '<td class="align-middle">' . $data . '</td>';
+						$row .= Html::td($data, $bodyCellOptions);
 					}
 					else if(array_key_exists('textLink', $column)){
-						$paramName = $column['textLink'][2];
+						$paramName = $column['textLink']['params'];
 						$paramValue = $this->rowData[$i][$paramName];
 						$paramKey = $this->model->getLabel($paramName);
-						$row .= '<td><a href="' . URLROOT . '/' . $column['textLink'][1] . '?' . $paramKey . '=' . $paramValue . '">' . $column['textLink'][0] . '</a></td>';
+						Html::setAttribute($column['textLink']['options'], ['class' => $this->getDefaultClass('textLink')]);
+						$link = Html::a(URLROOT . '/' . $column['textLink']['route'], [$paramKey => $paramValue], $column['textLink']['text'], $column['textLink']['options']);
+						$row .= Html::td($link, $bodyCellOptions);
 					}
 					else if(array_key_exists('buttonLink', $column)){
-						$paramName = $column['buttonLink'][2];
-						$paramValue = $this->rowData[$i][$paramName];
-						$paramKey = $this->model->getLabel($paramName);
-						$row .= '<td><a class="btn btn-primary btn-sm" href="' . URLROOT . '/' . $column['buttonLink'][1] . '?' . $paramKey . '=' . $paramValue . '">' . $column['buttonLink'][0] . '</a></td>';
+						$params = [];
+						foreach($column['buttonLink']['params'] as $name){
+							$paramKey = $this->model->getLabel($name);
+							$paramValue = $this->rowData[$i][$name];
+							$params[$paramKey] = $paramValue;
+						}
+						Html::setAttribute($column['buttonLink']['options'], ['class' => $this->getDefaultClass('buttonLink')]);
+						$link = Html::a(URLROOT . '/' . $column['buttonLink']['route'], $params, $column['buttonLink']['text'], $column['buttonLink']['options']);
+						$row .= Html::td($link, $bodyCellOptions);
 					}
 				}
 			}
-			$row .= '</tr>';
+			$body .= Html::tr($row, $bodyRowOptions);
 		}
-		return $row;
-	}
+		$body = Html::tbody($body);
 
-	public function closeTable(){
-		return '</tbody></table>';
+		return Html::table($head . $body, $tableOptions);
 	}
 
 }

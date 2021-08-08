@@ -1,7 +1,6 @@
 <h1>My articles</h1>
 <?php
 
-$table = new Table();
 $columns = [
 	[
 		'field' => 'caption',
@@ -18,20 +17,21 @@ $columns = [
 	],
 	[
 		'columnLabel' => '',
-		'buttonLink' => ['Edit', 'articles/edit', 'article_id'],
+		'buttonLink' => ['text' => 'Edit', 'route' => 'articles/edit', 'params' => ['article_id'], 'options' => ['class' => 'btn btn-primary btn-sm']]
 	],
 	[
 		'columnLabel' => '',
-		'buttonLink' => ['Delete', 'articles/delete', 'article_id']
+		'buttonLink' => ['text' => 'Delete', 'route' => 'articles/delete', 'params' => ['article_id'], 'options' => ['class' => 'btn btn-primary btn-sm']]
 	]
 ];
-
-echo $table->openTable($columns, $model, $articles);
-echo $table->tableHead();
-echo $table->tableRows();
-echo $table->closeTable();
+$table = new Table($model, $columns, $articles);
+echo $table->createTable();
 
 if(sizeof($articles) == 0){
 	echo '<p>You have no articles.</p>';
 }
+
+$pageNav = new Pagenav($total, $pageSize, $page, ['adjacentCount' => 2]);
+echo $pageNav->nav(URLROOT . '/articles/myarticles');
+
 ?>

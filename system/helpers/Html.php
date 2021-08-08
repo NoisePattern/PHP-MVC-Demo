@@ -6,18 +6,22 @@
  * attributes are brought in on the options array.
  */
 abstract class Html {
-	public static ?ElementConstructor $EC = null;
+	private static array $closedElements = ['a', 'div', 'label', 'textarea', 'select', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'button'];
 
-	/**
-	 * Instantiates and returns an ElementConstructor.
-	 */
-	private static function dom(){
-		if(self::$EC == null){
-			self::$EC = new ElementConstructor();
-		}
-		return self::$EC;
+	private static function enclosed($name){
+		if(in_array($name, self::$closedElements)) return true;
+		return false;
 	}
 
+	private static function build($name, $content = '', $attributes = []){
+		$element = '<' . $name;
+		foreach($attributes as $key => $value){
+			$element .= ' ' . $key . '="' . $value . '"';
+		}
+		$element .= '>' . $content;
+		if(self::enclosed($name)) $element .= '</' . $name . '>';
+		return $element;
+	}
 	/**
 	 * Element attribute creation helper. In given options array, if a class exists and has content, the value is appended to content,
 	 * otherwise the class value is set to value. If value is empty, nothing happens.
@@ -70,6 +74,23 @@ abstract class Html {
 	}
 
 	/**
+	 * Creates a element.
+	 */
+	public static function a($href, $params = [], $text, $options = []){
+		$tail = '';
+		if(!empty($params)){
+			foreach($params as $key => $value){
+				if($tail === '') $tail .= '?';
+				else $tail .= '&';
+				$tail .= $key . '=' . $value;
+			}
+			$href .= $tail;
+		}
+		$options['href'] = $href;
+		return self::build('a', $text, $options);
+	}
+
+	/**
 	 * Creates an input element.
 	 *
 	 * @param string $type Type attribute of element, one of:
@@ -86,8 +107,9 @@ abstract class Html {
 		$options['type'] = $type;
 		$options['name'] = $name;
 		$options['value'] = (string) $value;
-		self::dom()->createElement('input', $options, '');
-		return self::dom()->getHTML();
+		return self::build('input', '', $options);
+//		self::dom()->createElement('input', $options);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -100,9 +122,10 @@ abstract class Html {
 	 */
 	public static function label($text, $for, $options = []){
 		$options['for'] = $for;
-		$element = self::dom()->createElement('label', $options, '');
-		self::dom()->setText($text, $element);
-		return self::dom()->getHTML();
+		return self::build('label', $text, $options);
+//		$element = self::dom()->createElement('label', $options);
+//		self::dom()->setText($text, $element);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -114,9 +137,10 @@ abstract class Html {
 	 */
 	public static function textarea($content = '', $name = '', $options = []){
 		$options['name'] = $name;
-		$element = self::dom()->createElement('textarea', $options, '');
-		self::dom()->setText($content, $element);
-		return self::dom()->getHTML();
+		return self::build('textarea', $content, $options);
+//		$element = self::dom()->createElement('textarea', $options);
+//		self::dom()->setText($content, $element);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -131,8 +155,9 @@ abstract class Html {
 		$options['type'] = 'checkbox';
 		$options['name'] = $name;
 		$options['value'] = (string) $value;
-		self::dom()->createElement('input', $options, '');
-		return self::dom()->getHTML();
+		return self::build('input', '', $options);
+//		self::dom()->createElement('input', $options);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -147,8 +172,9 @@ abstract class Html {
 		$options['type'] = 'radio';
 		$options['name'] = $name;
 		$options['value'] = (string) $value;
-		self::dom()->createElement('input', $options, '');
-		return self::dom()->getHTML();
+		return self::build('input', '', $options);
+//		self::dom()->createElement('input', $options);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -162,8 +188,9 @@ abstract class Html {
 	 */
 	public static function select($content = [], $selected, $name, $options = []){
 		$options['name'] = $name;
-		$element = self::dom()->createElement('select', $options, '');
+//		$element = self::dom()->createElement('select', $options);
 		// Create select's option elements.
+		$subElement = '';
 		foreach($content as $value => $text){
 			$subOptions = [];
 			$subOptions['value'] = $value;
@@ -172,11 +199,12 @@ abstract class Html {
 			} else {
 				if($value == $selected)  $subOptions['selected'] = 'selected';
 			}
-			$subElement = self::dom()->createElement('option', $subOptions);
-			self::dom()->setText($text, $subElement);
-			self::dom()->import($subElement, $element);
+			$subElement .= self::build('option', $text, $subOptions);
+//			$subElement = self::dom()->createElement('option', $subOptions, $element);
+//			self::dom()->setText($text, $subElement);
 		}
-		return self::dom()->getHTML();
+		return self::build('select', $subElement, $options);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -190,8 +218,9 @@ abstract class Html {
 		$options['type'] = 'range';
 		$options['name'] = $name;
 		$options['value'] = $value;
-		self::dom()->createElement('input', $options, '');
-		return self::dom()->getHTML();
+		return self::build('input', '', $options);
+//		self::dom()->createElement('input', $options);
+//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -201,28 +230,66 @@ abstract class Html {
 	 * @param string $text Button's displayable text.
 	 * @param array $options Array of attributes for the element as key-value pairs.
 	 */
-	public static function button($type, $text, $options){
+	public static function button($type, $text, $options = []){
 		$options['type'] = $type;
-		$element = self::dom()->createElement('button', $options, '');
-		self::dom()->setText($text, $element);
-		return self::dom()->getHTML();
+		return self::build('button', $text, $options);
+//		$element = self::dom()->createElement('button', $options);
+//		self::dom()->setText($text, $element);
+//		return self::dom()->getHTML();
 	}
 
 	/**
 	 * Creates a div element.
 	 *
-	 * @param string $text Div text content.
-	 * @param string $html Div HTML content.
+	 * @param string $content Div content.
 	 * @param array $options Array of attributes for the element as key-value pairs.
 	 * @return string The element formatted in HTML.
 	 */
-	public static function div($text = '', $html = '', $options = []){
-		$element = self::dom()->createElement('div', $options, '');
-		if($text !== '') self::dom()->setText($text, $element);
-		else if($html !== '') self::dom()->setHtml($html, $element);
-		return self::dom()->getHTML();
+	public static function div($content, $options = []){
+		return self::build('div', $content, $options);
 	}
 
+	/**
+	 * Creates table element.
+	 */
+	public static function table($content, $options = []){
+		return self::build('table', $content, $options);
+	}
+
+	/**
+	 * Creates a thead element.
+	 */
+	public static function thead($content, $options = []){
+		return self::build('thead', $content, $options);
+	}
+
+	/**
+	 * Creates a tbody element.
+	 */
+	public static function tbody($content, $options = []){
+		return self::build('tbody', $content, $options);
+	}
+
+	/**
+	 * Creates a table row element.
+	 */
+	public static function tr($content, $options = []){
+		return self::build('tr', $content, $options);
+	}
+
+	/**
+	 * Creates a table heading element.
+	 */
+	public static function th($content, $options = []){
+		return self::build('th', $content, $options);
+	}
+
+	/**
+	 * Creates a table data element.
+	 */
+	public static function td($content, $options = []){
+		return self::build('td', $content, $options);
+	}
 }
 
 ?>

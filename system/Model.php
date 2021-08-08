@@ -326,6 +326,29 @@ abstract class Model {
 		}
 		return $fields;
 	}
+
+	/**
+	 * Counts number of rows matching query criteria.
+	 *
+	 * @param array $condition query conditions as key-value pairs.
+	 */
+	public function count($condition = []){
+		$tableName = $this->tableName();
+		$where = '';
+		if(!empty($condition)){
+			$fields = array_keys($condition);
+			$where = implode(" AND ", array_map(fn($field) => $field . ' = :'.$field, $fields));
+		}
+		$sql = 'SELECT COUNT(*) FROM ' . $tableName;
+		if($where !== '') $sql .= ' WHERE ' . $where;
+		$statement = $this->db->prepare($sql);
+		foreach($condition as $key => $value){
+			$statement->bindValue(':'.$key, $value);
+		}
+		$statement->execute();
+		return $statement->fetchColumn();
+	}
+
 	/**
 	 * Queries the database for a single result, either by primary key or by array of search values.
 	 *
@@ -358,8 +381,9 @@ abstract class Model {
 	 *
 	 * @param array $condition An associative array of search parameters for the where clause. Set empty array for no conditions.
 	 * @param array $params Additional query params array. Supports:
-	 * 					'orderBy' => ['columnName', 'order']	Where columnName is the DB name of the column to order by, and 'order'is either 'ASC' or 'DESC'.
-	 * 					'limit' => integer 						Where integer is the limit for the query.
+	 * - orderBy: an array where first entry is the column name to order by, and second value is direction, either ASC or DESC string.
+	 * - limit: The limit value.
+	 * - offset: The offset value.
 	 */
 	public function findAll($condition, $params){
 		$tableName = $this->tableName();
@@ -371,23 +395,37 @@ abstract class Model {
 		// If there is orderBy param.
 		if(array_key_exists('orderBy', $params)){
 			// Make sure the column exists in model and direction is ASC or DESC
-			if(property_exists($this, $params['orderBy'][0]) && ($params['orderBy'][1] === 'ASC' || $params['orderBy'][1] === 'DESC')){
-				$sql .= ' ORDER BY ' . $params['orderBy'][0] . ' ' . $params['orderBy'][1];
+			if(property_exists($this, $params['orderBy'][0]) ){
+				$sql .= ' ORDER BY :order ';
+				if(strtolower($params['orderBy'][1]) === 'asc') $sql .= ' ASC';
+				else if(strtolower($params['orderBy'][1]) === 'desc') $sql .= ' DESC';
 			}
 		}
 		// If there is limit param.
 		if(array_key_exists('limit', $params)){
-			if(is_integer($params['limit'])){
-				$sql .= ' LIMIT ' . $params['limit'];
-			}
+			$sql .= ' LIMIT :limit';
+		}
+		// If there is offset param.
+		if(array_key_exists('offset', $params)){
+			$sql .= ' OFFSET :offset';
 		}
 		$statement = $this->db->prepare($sql);
 		foreach($condition as $key => $value){
 			$statement->bindValue(':'.$key, $value);
 		}
+		if(array_key_exists('orderBy', $params)){
+			$statement->bindValue(':order', $params['orderBy'][0], PDO::PARAM_STR);
+		}
+		if(array_key_exists('limit', $params)){
+			$statement->bindValue(':limit', $params['limit'], PDO::PARAM_INT);
+		}
+		if(array_key_exists('offset', $params)){
+			$statement->bindValue(':offset', $params['offset'], PDO::PARAM_INT);
+		}
 		$statement->execute();
 		return $statement->fetchAll();
 	}
+
 	/**
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */

@@ -40,3 +40,20 @@ body {
 #main {
 	background-color: #ffffff;
 }
+
+.pageNav {
+	padding: 0.25em;
+}
+
+.pageItem {
+	margin: 0em .25em;
+	padding: 0.3em 0.4em;
+	border:1px solid #000000;
+	background-color: #f0f0f0;
+}
+
+.pageItemCurrent {
+	margin: 0em .25em;
+	padding: 0.3em 0.4em;
+	border:1px solid #000000;
+}

@@ -52,32 +52,51 @@ class Articles extends Controller {
 	 * Admin view of articles.
 	 */
 	public function admin(){
-		// Create array of all users for a user select dropdown.
-		$userModel = new User();
-		$dropdownContent = [];
-		$selectedUser = NULL;
-		$users = $userModel->findAll([], ['orderBy' => ['username', 'ASC']]);
-		foreach($users as $user){
-			// Take first found user as selected user.
-			if(is_null($selectedUser)){
-				$selectedUser = $user['user_id'];
-			}
-			$dropdownContent[$user['user_id']] = $user['username'];
+		$selectedUser = 0;			// Selected user.
+		$pageSize = 10;				// Number of articles per page.
+		$page = 0;					// Current page.
+
+		// Check if article edit page wants to return to list of specific user's articles.
+		if(Session::checkKey('selectedUser')){
+			$selectedUser = Session::getKey('selectedUser');
+			Session::unsetKey(['selectedUser']);
 		}
-		// Get all articles.
-		$articleModel = new Article();
 		// If user has been selected from dropdown.
 		if(Application::$app->request->isPost()){
 			$data = Application::$app->request->post();
-			$selectedUser = $data['selectedUser'];
+			if(isset($data['selectedUser'])) $selectedUser = $data['selectedUser'];
+		}
+		// If pagenav link was clicked.
+		else if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			if(isset($data['selectedUser'])) $selectedUser = $data['selectedUser'];
+			if(isset($data['page'])) $page = $data['page'];
+		}
+
+		// Create array of all users for a user selection dropdown.
+		$userModel = new User();
+		$dropdownContent = [0 => 'All users'];
+		$users = $userModel->findAll([], ['orderBy' => ['username', 'ASC']]);
+		foreach($users as $user){
+			$dropdownContent[$user['user_id']] = $user['username'];
 		}
 		$userModel->selectedUser = $selectedUser;
-		$articles = $articleModel->findAll(['user_id' => $selectedUser], ['orderBy' => ['created', 'DESC']]);
+
+		// Get user's articles on given page.
+		$articleModel = new Article();
+		$where = [];
+		if($selectedUser != 0) $where['user_id'] = $selectedUser;
+		$articles = $articleModel->findAll($where, ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'DESC']]);
 		foreach($articles as $key => $article){
 			$thisUser = $userModel->findOne($article['user_id']);
 			$articles[$key]['author'] = $thisUser->username;
 		}
-		$this->view('admin', ['articleModel' => $articleModel, 'articles' => $articles, 'userModel' => $userModel, 'dropdownContent' => $dropdownContent]);
+		// Get total number of articles by user (or all users).
+		$total = $articleModel->count($where);
+
+		$this->view('admin', ['articleModel' => $articleModel, 'articles' => $articles, 'userModel' => $userModel, 'dropdownContent' => $dropdownContent,
+		'page' => $page, 'pageSize' => $pageSize, 'total' => $total
+		]);
 	}
 
 	public function article(){
@@ -98,9 +117,21 @@ class Articles extends Controller {
 	 * List of user's articles.
 	 */
 	public function myarticles(){
+		$pageSize = 10;				// Number of articles per page.
+		$page = 0;					// Current page.
+
+		// If pagenav link was clicked.
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			if(isset($data['page'])) $page = $data['page'];
+		}
 		$articleModel = new Article();
-		$articles = $articleModel->findAll(['user_id' => Session::getKey('user_id')], ['orderBy' => ['created', 'DESC']]);
-		$this->view('myarticles', ['model' => $articleModel, 'articles' => $articles]);
+		$articles = $articleModel->findAll(['user_id' => Session::getKey('user_id')], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'DESC']]);
+
+		// Get total number of articles by user (or all users).
+		$total = $articleModel->count(['user_id' => Session::getKey('user_id')]);
+
+		$this->view('myarticles', ['model' => $articleModel, 'articles' => $articles, 'pageSize' => $pageSize, 'page' => $page, 'total' => $total]);
 	}
 
 	/**
@@ -141,6 +172,10 @@ class Articles extends Controller {
 				if($articleModel->save()){
 					Session::setFlash('success', 'Article updated.');
 					if(Session::checkKey('senderController') && Session::checkKey('senderAction')){
+						// If page that sent to edit was admin page, inform it of user to select from dropdown.
+						if(Session::getKey('senderAction') == 'admin'){
+							Session::setKey(['selectedUser' => $articleModel->user_id]);
+						}
 						Application::$app->request->redirect(Session::getKey('senderController'), Session::getKey('senderAction'));
 						Session::unsetKey(['senderController', 'senderAction']);
 					} else {

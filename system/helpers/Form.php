@@ -1,7 +1,6 @@
 <?php
 
-class Form {
-
+class Form extends HtmlHelper {
 	/**
 	 * Creates HTML to open a form.
 	 *
