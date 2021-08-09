@@ -1,7 +1,7 @@
 <?php
 
 /**
- * To implement authorization, a controller must define a $permissions array. Each action that requires a permission check must be a key
+ * To implement authorization, a controller must fill the array in permissions method. Each action that requires a permission check must be a key
  * inside the array. For each action key, an array of checks can be defined. The checks array may hold following keys:
  * - login: With value of true the user must be logged in.
  *   - example: 'login' => true;

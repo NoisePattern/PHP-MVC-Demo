@@ -356,6 +356,7 @@ abstract class Model {
 	 * @return object The query result as object.
 	 */
 	public function findOne($condition){
+		$this->beforeFind();
 		$tableName = $this->tableName();
 		if(is_array($condition)){
 			$fields = array_keys($condition);
@@ -373,7 +374,9 @@ abstract class Model {
 			$statement->bindValue(':' . $primary, $condition);
 		}
 		$statement->execute();
-		return $statement->fetchObject();
+		$result = $statement->fetchObject();
+		$this->afterFind($result);
+		return $result;
 	}
 
 	/**
@@ -384,8 +387,10 @@ abstract class Model {
 	 * - orderBy: an array where first entry is the column name to order by, and second value is direction, either ASC or DESC string.
 	 * - limit: The limit value.
 	 * - offset: The offset value.
+	 * @return array Returns a result set.
 	 */
 	public function findAll($condition, $params){
+		$this->beforeFind();
 		$tableName = $this->tableName();
 		$sql = 'SELECT * FROM ' . $tableName;
 		if(!empty($condition)){
@@ -396,34 +401,33 @@ abstract class Model {
 		if(array_key_exists('orderBy', $params)){
 			// Make sure the column exists in model and direction is ASC or DESC
 			if(property_exists($this, $params['orderBy'][0]) ){
-				$sql .= ' ORDER BY :order ';
+				$sql .= ' ORDER BY ' . $params['orderBy'][0];
 				if(strtolower($params['orderBy'][1]) === 'asc') $sql .= ' ASC';
 				else if(strtolower($params['orderBy'][1]) === 'desc') $sql .= ' DESC';
 			}
 		}
 		// If there is limit param.
-		if(array_key_exists('limit', $params)){
+		if(array_key_exists('limit', $params) && $params['limit'] > 0){
 			$sql .= ' LIMIT :limit';
-		}
-		// If there is offset param.
-		if(array_key_exists('offset', $params)){
-			$sql .= ' OFFSET :offset';
+			// If there is offset param.
+			if(array_key_exists('offset', $params)){
+				$sql .= ' OFFSET :offset';
+			}
 		}
 		$statement = $this->db->prepare($sql);
 		foreach($condition as $key => $value){
 			$statement->bindValue(':'.$key, $value);
 		}
-		if(array_key_exists('orderBy', $params)){
-			$statement->bindValue(':order', $params['orderBy'][0], PDO::PARAM_STR);
-		}
-		if(array_key_exists('limit', $params)){
+		if(array_key_exists('limit', $params) && $params['limit'] > 0){
 			$statement->bindValue(':limit', $params['limit'], PDO::PARAM_INT);
-		}
-		if(array_key_exists('offset', $params)){
-			$statement->bindValue(':offset', $params['offset'], PDO::PARAM_INT);
+			if(array_key_exists('offset', $params)){
+				$statement->bindValue(':offset', $params['offset'], PDO::PARAM_INT);
+			}
 		}
 		$statement->execute();
-		return $statement->fetchAll();
+		$result = $statement->fetchAll();
+		$this->afterFind($result);
+		return $result;
 	}
 
 	/**
@@ -436,6 +440,20 @@ abstract class Model {
 	 * Post-save operations. If model successfully inserted or updated, this action runs.
 	 */
 	public function afterSave(){
+	}
+
+	/**
+	 * Pre-find operations. Runs before a select query is executed.
+	 */
+	public function beforeFind(){
+	}
+
+	/**
+	 * Post-find operations. Runs after a select query has been executed.
+	 *
+	 * @param array $result The result array of a fetch operation.
+	 */
+	public function afterFind(&$result){
 	}
 }
 ?>

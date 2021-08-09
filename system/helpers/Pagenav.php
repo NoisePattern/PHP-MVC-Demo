@@ -22,7 +22,7 @@ class Pagenav extends HtmlHelper {
 	 * Pagenav constructor.
 	 *
 	 * @param int $itemCount The total number of items listed across pages.
-	 * @param int $pageSize The number of items shown on each page.
+	 * @param int $pageSize The number of items shown on each page. If set to zero, all items are shown.
 	 * @param int $pageCurrent The current page, default is zero for first page.
 	 * @param array $options An array of configuration options as key-value pairs. Supported keys:
 	 * - adjacentCount: the number of page links displayed before and after current page link. Default is 3.
@@ -32,7 +32,11 @@ class Pagenav extends HtmlHelper {
 		$this->itemCount = $itemCount;
 		$this->pageSize = $pageSize;
 		$this->pageCurrent = $pageCurrent;
-		$this->pageCount = ceil($itemCount / $pageSize) - 1;
+		if($pageSize > 0){
+			$this->pageCount = ceil($itemCount / $pageSize) - 1;
+		} else {
+			$this->pageCount = 0;
+		}
 		if(isset($options['adjacentCount'])) $this->adjacentCount = $options['adjacentCount'];
 		if(isset($options['endLinks'])) $this->adjacentCount = $options['endLinks'];
 		if(isset($options['stepLinks'])) $this->adjacentCount = $options['stepLinks'];
@@ -46,13 +50,12 @@ class Pagenav extends HtmlHelper {
 	 */
 	public function nav($href, $params = [], $linkOptions = []){
 		// If all items fit on one page, do not draw navigation.
-		if($this->itemCount <= $this->pageSize) return;
+		if($this->pageCount == 0) return;
 
 		$nav = '';
 
 		// If first numbered page is always shown.
 		if($this->endLinks && $this->pageCurrent > 0){
-
 			$thisParams = $params;
 			$thisParams['page'] = 0;
 			$options = $linkOptions;

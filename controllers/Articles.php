@@ -38,14 +38,27 @@ class Articles extends Controller {
 	 * Browse articles.
 	 */
 	public function index(){
+		$pageSize = 5;						// Number of articles per page.
+		$page = 0;							// Current page.
 		$articleModel = new Article();
 		$userModel = new User();
-		$articles = $articleModel->findAll(['published' => 1], ['orderBy' => ['created', 'DESC']]);
+
+		// If pagenav link was clicked.
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			if(isset($data['page'])) $page = $data['page'];
+		}
+
+		// Get articles for current page.
+		$articles = $articleModel->findAll(['published' => 1], ['limit' => $pageSize, 'offset' => $pageSize * $page, 'orderBy' => ['created', 'DESC']]);
 		foreach($articles as $key => $article){
 			$user = $userModel->findOne($article['user_id']);
 			$articles[$key]['author'] = $user->username;
 		}
-		$this->view('index', ['articles' => $articles]);
+
+		// Get number of published articles
+		$total = $articleModel->count(['published' => 1]);
+		$this->view('index', ['articles' => $articles, 'pageSize' => $pageSize, 'page' => $page, 'total' => $total]);
 	}
 
 	/**
@@ -87,10 +100,6 @@ class Articles extends Controller {
 		$where = [];
 		if($selectedUser != 0) $where['user_id'] = $selectedUser;
 		$articles = $articleModel->findAll($where, ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'DESC']]);
-		foreach($articles as $key => $article){
-			$thisUser = $userModel->findOne($article['user_id']);
-			$articles[$key]['author'] = $thisUser->username;
-		}
 		// Get total number of articles by user (or all users).
 		$total = $articleModel->count($where);
 
@@ -99,6 +108,9 @@ class Articles extends Controller {
 		]);
 	}
 
+	/**
+	 * Display article.
+	 */
 	public function article(){
 		$articleModel = new Article();
 		$data = Application::$app->request->get();

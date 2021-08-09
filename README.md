@@ -1,20 +1,27 @@
 # PHP-MVC Demo
 
-Yksinkertainen PHP:llä kirjoitettu MVC-frame. Sisältää perustoiminnot kuten käyttäjät ja sisäänkirjautuminen, session seuranta, perus CRUD-operaatiot ja sisällön validaatio sääntöasetuksilla, PDO-kantatoiminta, yksinkertainen käyttöoikeusjärjestelmä, apuskriptejä HTML-lomakkeiden ja -taulujen luontiin.
+A simple PHP-based MVC framework. Has the following features:
+* MVC structure.
+* Route class to handle urls and send requests to correct controllers and actions.
+* Request class that handles POST and GET data.
+* Session data manager.
+* Authorization class using simple permission-based authorizations.
+* Model makes database requests via PDO and supports basic CRUD operations.
+* Model does content validation through customizable rulesets.
+* Model supports before- and after-execution calls.
+* View has HTML helper classes to create basic HTML, Model-based forms and tables, and page navigators.
+* User registration and login.
 
-Käyttää [Bootstrappia](https://getbootstrap.com/) (V5) ulkoasun kaunisteluun ja [Summernote](https://summernote.org/)-editoria artikkelien HTML-sisällön luontiin.
+Uses [Bootstrappia](https://getbootstrap.com/) (V5) for prettier layout and [Summernote](https://summernote.org/)-editor as article content editor.
 
-## KÄYTTÖ
+## USAGE
 
-Vaatii palvelimen ja kannan alleen (testattu Apachella). Juuressa oleva db.sql sisältää kannan luonnin. Kanta sisältää admin tasoisen käyttäjän (nimi admin, salasama admin) jolla on suuremmat hallinnointioikeudet kuin rekisteröinnin kautta luotavilla käyttäjillä.
+Requires a database connection (tested on Apache & MySQL). Project root contains a db.sql file that can execute database creation. The database contains an admin-level default user (username admin, password admin) that has higher administrative permissions than users created through registration page.
 
-Juuren alla olevaan config/config.php tiedostoon tulee asettaa kantayhteystiedot ja URLROOT-määritys tulee asettaa osoittamaan juurihakemistoon. Pitäisi toimia myös PHP:n oman palvelun kautta juoksuttamalla se www-hakemistossa, jolloin URLROOT on pelkkä localhost.
+The config.php.example under config directory must be renamed to config.php. Database connection details should be written to its defines and the URLROOT define should be set to point to the project's location (default is 'localhost/mvc_demo').
 
-TODO:
-* ~~Requestin sisällön käsittely omaan luokkaansa.~~
-* ~~Routtauksen parantelu ja asettaminen omaan luokkaansa.~~
-* ~~Form-luokassa liikaa koodin toistoa div-wrappereiden ja label-elementtien rakennuksessa, lyhennetään omiin metodeihin.~~
-* Puuttuvat form-elementtien rakentajametodit.
-* Authorisaation uudelleenkirjoitus roolipohjaisiin käyttöoikeuksiin jotta esim. päivitystoiminnot voidaan rajata vain omistajaan. (Nyt kaikki menee läpi kun form-dataa menee sorkkimaan.)
-* ~~Modelin validaatiosääntöihin Unique-sääntö estämään esim. käyttäjänimien ja emailien duplikaatio.~~
-* Virheiden näytön parantelu.
+## TODO
+
+* Rewrite auth system to use role-based permissions, so for example content update actions can be restricted to content owner (right now everything goes through if form-data is directly tampered with).
+* Improve error display and management.
+* An image gallery page and manager to demonstrate file uploading.

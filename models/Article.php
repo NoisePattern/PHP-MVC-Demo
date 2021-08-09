@@ -93,10 +93,12 @@ class Article extends Model {
 		}
 	}
 
-	/**
-	 * Post-save operations. If model successfully inserted or updated, this action runs.
-	 */
-	public function afterSave(){
+	public function afterFind(&$result){
+		$userModel = new User();
+		foreach($result as $key => $article){
+			$thisUser = $userModel->findOne($article['user_id']);
+			$result[$key]['author'] = $thisUser->username;
+		}
 	}
 }
 ?>

@@ -108,8 +108,6 @@ abstract class Html {
 		$options['name'] = $name;
 		$options['value'] = (string) $value;
 		return self::build('input', '', $options);
-//		self::dom()->createElement('input', $options);
-//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -123,9 +121,6 @@ abstract class Html {
 	public static function label($text, $for, $options = []){
 		$options['for'] = $for;
 		return self::build('label', $text, $options);
-//		$element = self::dom()->createElement('label', $options);
-//		self::dom()->setText($text, $element);
-//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -138,9 +133,6 @@ abstract class Html {
 	public static function textarea($content = '', $name = '', $options = []){
 		$options['name'] = $name;
 		return self::build('textarea', $content, $options);
-//		$element = self::dom()->createElement('textarea', $options);
-//		self::dom()->setText($content, $element);
-//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -156,8 +148,6 @@ abstract class Html {
 		$options['name'] = $name;
 		$options['value'] = (string) $value;
 		return self::build('input', '', $options);
-//		self::dom()->createElement('input', $options);
-//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -173,8 +163,6 @@ abstract class Html {
 		$options['name'] = $name;
 		$options['value'] = (string) $value;
 		return self::build('input', '', $options);
-//		self::dom()->createElement('input', $options);
-//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -188,7 +176,6 @@ abstract class Html {
 	 */
 	public static function select($content = [], $selected, $name, $options = []){
 		$options['name'] = $name;
-//		$element = self::dom()->createElement('select', $options);
 		// Create select's option elements.
 		$subElement = '';
 		foreach($content as $value => $text){
@@ -200,11 +187,8 @@ abstract class Html {
 				if($value == $selected)  $subOptions['selected'] = 'selected';
 			}
 			$subElement .= self::build('option', $text, $subOptions);
-//			$subElement = self::dom()->createElement('option', $subOptions, $element);
-//			self::dom()->setText($text, $subElement);
 		}
 		return self::build('select', $subElement, $options);
-//		return self::dom()->getHTML();
 	}
 
 	/**
@@ -219,8 +203,18 @@ abstract class Html {
 		$options['name'] = $name;
 		$options['value'] = $value;
 		return self::build('input', '', $options);
-//		self::dom()->createElement('input', $options);
-//		return self::dom()->getHTML();
+	}
+
+	/**
+	 * Creates a file input element.
+	 *
+	 * @param string $name Name attribute of element.
+	 * @param array $options Array of attributes for the element as key-value pairs.
+	 */
+	public static function file($name, $options = []){
+		$options['type'] = 'file';
+		$options['name'] = $name;
+		return self::build('input', '', $options);
 	}
 
 	/**
@@ -233,9 +227,6 @@ abstract class Html {
 	public static function button($type, $text, $options = []){
 		$options['type'] = $type;
 		return self::build('button', $text, $options);
-//		$element = self::dom()->createElement('button', $options);
-//		self::dom()->setText($text, $element);
-//		return self::dom()->getHTML();
 	}
 
 	/**

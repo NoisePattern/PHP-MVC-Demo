@@ -8,6 +8,7 @@ class Form extends HtmlHelper {
 	 * @param string $method Form's method.
 	 * @param array @options Array of options as key-value pairs to format the element. Supported keys:
 	 * - class: Sets class value.
+	 * - enctype: Sets form enctype.
 	 * - novalidate: If set, adds novalidate attribute.
 	 * @return string Returns opening form element.
 	 */
@@ -19,6 +20,9 @@ class Form extends HtmlHelper {
 		}
 		if(isset($options['novalidate'])){
 			$html .= ' novalidate';
+		}
+		if(isset($options['enctype'])){
+			$html .= ' enctyle="' . $options['enctype'] . '"';
 		}
 		$html .= '>';
 		return $html;

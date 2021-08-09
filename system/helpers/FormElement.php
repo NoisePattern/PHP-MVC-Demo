@@ -27,8 +27,9 @@ class FormElement extends HtmlHelper {
 		'checkbox' => 'form-check-input',		// Class required by checkbox element.
 		'range' => 'form-range',				// Class required by range element.
 		'radio' => 'form-check-input',			// Class required by radio element.
+		'file' => 'form-control',				// Class required by file input element.
 		'button' => 'btn btn-primary',			// Class required by button element.
-		'error' => 'is-invalid',				// Class required by any element with error.
+		'error' => 'is-invalid',				// Class required by any form element with error.
 		'checkDiv' => 'form-check',				// Class required by div wrapping a checkbox.
 		'errorDiv' => 'invalid-feedback'		// Class required by div wrapping an error message.
 	];
@@ -389,6 +390,32 @@ class FormElement extends HtmlHelper {
 		$this->elements['control'] = Html::range(
 			$this->name,
 			Html::selectAttribute('value', $options, $this->model->{$this->name}),
+			$options
+		);
+		// Return object to method chain.
+		return $this;
+	}
+
+	/**
+	 * Creates a file input element.
+	 *
+	 * @param array $options Array of options as key-value pairs to format the element. Supported keys:
+	 * - multiple: When set, file dialog allows selection of multiple files.
+	 * - accept: Allowed file types list, either as filename extensions or MIME types.
+	 */
+	public function file($options = []){
+		// Set default attributes.
+		Html::setAttribute($options, [
+			'id' => $this->name,
+			'class' => $this->getDefaultClass('file')
+		]);
+		// On error, add error class if error classes are enabled.
+		if($this->hasError && $this->errorClasses){
+			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
+		}
+		// Create and store the element.
+		$this->elements['control'] = Html::file(
+			$this->name,
 			$options
 		);
 		// Return object to method chain.

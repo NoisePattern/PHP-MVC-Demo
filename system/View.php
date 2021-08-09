@@ -1,5 +1,6 @@
 <?php
 
+// Require various HTML formatter helper files.
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Html.php');
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'HtmlHelper.php');
 require_once(APPROOT . DS . 'system' . DS . 'helpers' . DS . 'Form.php');

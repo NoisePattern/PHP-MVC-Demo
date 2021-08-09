@@ -6,7 +6,6 @@ class Application {
 	public $router;
 	public $controller;
 	public $action;
-//	public $requestMethod = '';
 	public $params = [];
 
 	public function __construct(){

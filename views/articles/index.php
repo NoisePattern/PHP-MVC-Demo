@@ -20,4 +20,7 @@ if(sizeof($articles) == 0){
 	echo '<p>Currently there are no articles.</p>';
 }
 
+$pageNav = new Pagenav($total, $pageSize, $page, ['adjacentCount' => 3]);
+echo $pageNav->nav(URLROOT . '/articles/index');
+
 ?>
