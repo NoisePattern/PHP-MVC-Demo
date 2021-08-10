@@ -7,10 +7,13 @@ class Pagenav extends HtmlHelper {
 	protected $pageCurrent = 0;				// Current page.
 
 	protected $adjacentCount = 3;			// Number of page-numbered page links shown before and after current page.
-	protected $endLinks = true;				// Display page-numbered first and last page links.
-	protected $stepLinks = false;			// Display navigation icons that step to next and previous page.
-	protected $jumpLinks = false;			// Display navigation icons that jump to first and last page.
-
+	protected $linkStyle = 'numbered';		// Style of page links, either of 'numbers' or 'icons'.
+	protected $linkStrings = [				// Default strings when linkstyle is 'icons'.
+		'first' => '<<',
+		'previous' => '<',
+		'next' => '>',
+		'last' => '>>'
+	];
 	protected $useDefaults = true;
 	protected $elementDefaultClass = [
 		'pageNav' => 'pageNav',
@@ -25,8 +28,10 @@ class Pagenav extends HtmlHelper {
 	 * @param int $pageSize The number of items shown on each page. If set to zero, all items are shown.
 	 * @param int $pageCurrent The current page, default is zero for first page.
 	 * @param array $options An array of configuration options as key-value pairs. Supported keys:
-	 * - adjacentCount: the number of page links displayed before and after current page link. Default is 3.
-	 * - endLinks: display links to first and last page. Default is true.
+	 * - adjacentCount: The number of page links displayed before and after current page link. Default is 3.
+	 * - linkStyle: The style of links displayed at far ends of navigation. Either 'numbered' or 'icons'. Default is 'numbered'.
+	 * - linkStrings: An array of strings to use as custom icons. Defaults are: ['first' => '<<', 'previous' => '<', 'next' => '>', 'last' => '>>']
+
 	 */
 	public function __construct($itemCount, $pageSize, $pageCurrent = 0, $options = []){
 		$this->itemCount = $itemCount;
@@ -38,9 +43,7 @@ class Pagenav extends HtmlHelper {
 			$this->pageCount = 0;
 		}
 		if(isset($options['adjacentCount'])) $this->adjacentCount = $options['adjacentCount'];
-		if(isset($options['endLinks'])) $this->adjacentCount = $options['endLinks'];
-		if(isset($options['stepLinks'])) $this->adjacentCount = $options['stepLinks'];
-		if(isset($options['jumpLinks'])) $this->adjacentCount = $options['jumpLinks'];
+		if(isset($options['linkStyle'])) $this->linkStyle = $options['linkStyle'];
 	}
 
 	/**
@@ -54,18 +57,30 @@ class Pagenav extends HtmlHelper {
 
 		$nav = '';
 
-		// If first numbered page is always shown.
-		if($this->endLinks && $this->pageCurrent > 0){
+		// If icon navigation is used.
+		if($this->linkStyle === 'icons' && $this->pageCurrent > 0){
+			// First page link.
+			$thisParams = $params;
+			$thisParams['page'] = 0;
+			$options = $linkOptions;
+			$options['class'] = $this->selectAttribute('class', $options, $this->getDefaultClass('pageItem'));
+			$nav .= Html::a($href, $thisParams, $this->linkStrings['first'], $options);
+			// Previous page link.
+			$thisParams['page'] = $this->pageCurrent - 1;
+			$nav .= Html::a($href, $thisParams, $this->linkStrings['previous'], $options);
+		}
+
+		// If numbered navigation is used.
+		else if($this->linkStyle == 'numbered' && $this->pageCurrent > 0){
 			$thisParams = $params;
 			$thisParams['page'] = 0;
 			$options = $linkOptions;
 			$options['class'] = $this->selectAttribute('class', $options, $this->getDefaultClass('pageItem'));
 			$nav .= Html::a($href, $thisParams, '0', $options);
-			$adjacentStart = max(1, $this->pageCurrent - $this->adjacentCount);
 		}
 
 		// Adjacent numbered page links before current page.
-		$adjacentStart = max($this->endLinks ? 1 : 0, $this->pageCurrent - $this->adjacentCount);
+		$adjacentStart = max($this->linkStyle === 'numbered' ? 1 : 0, $this->pageCurrent - $this->adjacentCount);
 		if($adjacentStart > 1) $nav.= '<span> ... </span>';
 		if($this->adjacentCount > 0){
 			for($i = $adjacentStart; $i <= $this->pageCurrent - 1; $i++){
@@ -73,9 +88,10 @@ class Pagenav extends HtmlHelper {
 				$thisParams['page'] = $i;
 				$options = $linkOptions;
 				$options['class'] = $this->selectAttribute('class', $options, $this->getDefaultClass('pageItem'));
-					$nav .= Html::a($href, $thisParams, $i, $options);
+				$nav .= Html::a($href, $thisParams, $i, $options);
 			}
 		}
+
 		// Current page.
 		$thisParams = $params;
 		$thisParams['page'] = $this->pageCurrent;
@@ -84,7 +100,7 @@ class Pagenav extends HtmlHelper {
 		$nav .= Html::a($href, $thisParams, $this->pageCurrent, $options);
 
 		// Adjacent numbered page links after current page.
-		$adjacentEnd = min($this->endLinks ? $this->pageCount -1 : $this->pageCount, $this->pageCurrent + $this->adjacentCount);
+		$adjacentEnd = min($this->linkStyle === 'numbered' ? $this->pageCount - 1 : $this->pageCount, $this->pageCurrent + $this->adjacentCount);
 		if($this->adjacentCount > 0){
 			for($i = $this->pageCurrent + 1; $i <= $adjacentEnd; $i++){
 				$thisParams = $params;
@@ -95,15 +111,27 @@ class Pagenav extends HtmlHelper {
 			}
 		}
 
-		// If last numbered page is always shown.
+		// If numbered navigation is used.
 		if($adjacentEnd < $this->pageCount - 1) $nav .= '<span> ... </span>';
-		if($this->endLinks && $this->pageCurrent < $this->pageCount){
-			$adjacentEnd = min($this->pageCount - 1, $this->pageCurrent + $this->adjacentCount);
+		if($this->linkStyle === 'numbered' && $this->pageCurrent < $this->pageCount){
 			$thisParams = $params;
 			$thisParams['page'] = $this->pageCount;
 			$options = $linkOptions;
 			$options['class'] = $this->selectAttribute('class', $options, $this->getDefaultClass('pageItem'));
 			$nav .= Html::a($href, $thisParams, $this->pageCount, $options);
+		}
+
+		// If icon navigation is used.
+		else if(($this->linkStyle === 'icons') && $this->pageCurrent < $this->pageCount){
+			// Next page link.
+			$thisParams = $params;
+			$thisParams['page'] = $this->pageCurrent + 1;
+			$options = $linkOptions;
+			$options['class'] = $this->selectAttribute('class', $options, $this->getDefaultClass('pageItem'));
+			$nav .= Html::a($href, $thisParams, $this->linkStrings['next'], $options);
+			// Last page link.
+			$thisParams['page'] = $this->pageCount;
+			$nav .= Html::a($href, $thisParams, $this->linkStrings['last'], $options);
 		}
 
 		$nav = Html::div($nav);

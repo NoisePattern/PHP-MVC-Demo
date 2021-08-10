@@ -11,8 +11,9 @@ A simple PHP-based MVC framework. Has the following features:
 * Model supports before- and after-execution calls.
 * View has HTML helper classes to create basic HTML, Model-based forms and tables, and page navigators.
 * User registration and login.
+* Migrations system for updating the database.
 
-Uses [Bootstrappia](https://getbootstrap.com/) (V5) for prettier layout and [Summernote](https://summernote.org/)-editor as article content editor.
+Uses [Bootstrap](https://getbootstrap.com/) (V5) for prettier layout and [Summernote](https://summernote.org/)-editor as article content editor.
 
 ## USAGE
 

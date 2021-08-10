@@ -41,7 +41,7 @@ if(sizeof($articles) == 0){
 	echo '<p>This user has no articles.</p>';
 }
 
-$pageNav = new Pagenav($total, $pageSize, $page, ['adjacentCount' => 2]);
+$pageNav = new Pagenav($total, $pageSize, $page, ['adjacentCount' => 2, 'linkStyle' => 'icons']);
 echo $pageNav->nav(URLROOT . '/articles/admin', ['selectedUser' => $userModel->selectedUser]);
 
 ?>
