@@ -17,9 +17,11 @@ Uses [Bootstrap](https://getbootstrap.com/) (V5) for prettier layout and [Summer
 
 ## USAGE
 
-Requires a database connection (tested on Apache & MySQL). Project root contains a db.sql file that can execute database creation. The database contains an admin-level default user (username admin, password admin) that has higher administrative permissions than users created through registration page.
+Requires a database connection (tested on Apache & MySQL).
 
 The config.php.example under config directory must be renamed to config.php. Database connection details should be written to its defines and the URLROOT define should be set to point to the project's location (default is 'localhost/mvc_demo').
+
+Necessary table are created by migrations system. After database settings are in config.php, on a terminal move to project root and run 'php migrations.php' to set up necessary tables.
 
 ## TODO
 
