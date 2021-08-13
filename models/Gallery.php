@@ -1,6 +1,6 @@
 <?php
 
-class LoginForm extends Model {
+class Gallery extends Model {
 
 	/**
 	 * Name of the associated table in DB.
@@ -8,14 +8,18 @@ class LoginForm extends Model {
 	 * @return string Returns table name.
 	 */
 	public function tableName(){
-		return 'users';
+		return 'galleries';
 	}
 
 	/**
 	 * Model variables, one for each DB table field, plus any other fields the form returns (but will not save to DB).
 	 */
-	public $username;
-	public $password;
+	public $gallery_id;
+	public $name;
+	public $filepath;
+	public $parent_id;
+	public $public;
+	public $selectedGallery;
 
 	/**
 	 * Name of DB table's primary key.
@@ -23,7 +27,7 @@ class LoginForm extends Model {
 	 * @return string Name of primary key.
 	 */
 	public function getPrimaryKey(){
-		return 'user_id';
+		return 'gallery_id';
 	}
 
 	/**
@@ -33,8 +37,11 @@ class LoginForm extends Model {
 	 */
 	public function fields(){
 		return [
-			'username',
-			'password'
+			'gallery_id',
+			'name',
+			'filepath',
+			'parent_id',
+			'public'
 		];
 	}
 
@@ -46,8 +53,9 @@ class LoginForm extends Model {
 	 */
 	public function labels(){
 		return [
-			'username' => 'Username',
-			'password' => 'Password',
+			'name' => 'Name',
+			'parent_id' => 'Parent gallery',
+			'public' => 'Public'
 		];
 	}
 
@@ -58,23 +66,42 @@ class LoginForm extends Model {
 	 */
 	public function rules(){
 		return [
-			'username' => ['required'],
-			'password' => ['required']
+			'name' => ['required'],
+			'filepath' => [['on', 'action' => 'create']]
 		];
 	}
 
-	public function login(){
-		$user = $this->findOne(['username' => $this->username]);
-		if(!$user || !password_verify($this->password, $user['password'])){
-			return false;
-		} else {
-			Session::setKey([
-				'user_id' => $user['user_id'],
-				'username' => $user['username'],
-				'level' => $user['level']
-			]);
-			return true;
+	/**
+	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
+	 */
+	public function beforeSave(){
+		// When new gallery is created, randomize a unique filepath name.
+		if($this->isCreate()){
+			do {
+				$path = $this->createPath();
+			} while(is_dir(APPROOT . 'www/galleries/' . $path));
+			mkdir(APPROOT . 'www/galleries/' . $path, 0744);
+			$this->filepath = $path;
 		}
+	}
+
+	/**
+	 * Post-save operations. If model successfully inserted or updated, this action runs.
+	 */
+	public function afterSave(){
+	}
+
+	/**
+	 * Creates a unique path name.
+	 */
+	private function createPath($size = 8){
+		$string = 'abcdefghijklmnopqrstuvwxyz1234567890';
+		$length = strlen($string) - 1;
+		$name = '';
+		for($i = 0; $i < $size; $i++){
+			$name .= substr($string, random_int(0, $length), 1);
+		}
+		return $name;
 	}
 }
 ?>

@@ -1,6 +1,6 @@
 <?php
 
-class LoginForm extends Model {
+class GalleryImages extends Model {
 
 	/**
 	 * Name of the associated table in DB.
@@ -8,14 +8,13 @@ class LoginForm extends Model {
 	 * @return string Returns table name.
 	 */
 	public function tableName(){
-		return 'users';
+		return 'galleryimages';
 	}
 
 	/**
 	 * Model variables, one for each DB table field, plus any other fields the form returns (but will not save to DB).
 	 */
-	public $username;
-	public $password;
+	public $bar;
 
 	/**
 	 * Name of DB table's primary key.
@@ -23,7 +22,7 @@ class LoginForm extends Model {
 	 * @return string Name of primary key.
 	 */
 	public function getPrimaryKey(){
-		return 'user_id';
+		return 'image_id';
 	}
 
 	/**
@@ -33,8 +32,12 @@ class LoginForm extends Model {
 	 */
 	public function fields(){
 		return [
-			'username',
-			'password'
+			'image_id',
+			'name',
+			'filename',
+			'gallery_id',
+			'user_id',
+			'created'
 		];
 	}
 
@@ -46,8 +49,8 @@ class LoginForm extends Model {
 	 */
 	public function labels(){
 		return [
-			'username' => 'Username',
-			'password' => 'Password',
+			'name' => 'Name',
+			'created' => 'Created'
 		];
 	}
 
@@ -58,23 +61,24 @@ class LoginForm extends Model {
 	 */
 	public function rules(){
 		return [
-			'username' => ['required'],
-			'password' => ['required']
+			'name' => ['required'],
+			'filename' => ['required'],
+			'gallery_id' => ['required', ['on', 'action' => 'create']],
+			'user_id' => ['required', ['on', 'action' => 'create']],
+			'created' => [['on', 'action' => 'create']],
 		];
 	}
 
-	public function login(){
-		$user = $this->findOne(['username' => $this->username]);
-		if(!$user || !password_verify($this->password, $user['password'])){
-			return false;
-		} else {
-			Session::setKey([
-				'user_id' => $user['user_id'],
-				'username' => $user['username'],
-				'level' => $user['level']
-			]);
-			return true;
-		}
+	/**
+	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
+	 */
+	public function beforeSave(){
+	}
+
+	/**
+	 * Post-save operations. If model successfully inserted or updated, this action runs.
+	 */
+	public function afterSave(){
 	}
 }
 ?>

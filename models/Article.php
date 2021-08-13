@@ -71,7 +71,7 @@ class Article extends Model {
 	 */
 	public function rules(){
 		return [
-			'user_id' => [['on', 'action' => 'create']],
+			'user_id' => ['required', ['on', 'action' => 'create']],
 			'caption' => ['required', ['length', 'max' => 200]],
 			'content' => ['required'],
 			'created' => [['on', 'action' => 'create']],
@@ -95,9 +95,14 @@ class Article extends Model {
 
 	public function afterFind(&$result){
 		$userModel = new User();
-		foreach($result as $key => $article){
-			$thisUser = $userModel->findOne($article['user_id']);
-			$result[$key]['author'] = $thisUser->username;
+		if(is_array($result)){
+			foreach($result as $key => $article){
+				$thisUser = $userModel->findOne($article['user_id']);
+				$result[$key]['author'] = $thisUser['username'];
+			}
+		} else {
+			$thisUser = $userModel->findOne($result->user_id);
+			$result->author = $thisUser['username'];
 		}
 	}
 }

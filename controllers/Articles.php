@@ -53,7 +53,7 @@ class Articles extends Controller {
 		$articles = $articleModel->findAll(['published' => 1], ['limit' => $pageSize, 'offset' => $pageSize * $page, 'orderBy' => ['created', 'DESC']]);
 		foreach($articles as $key => $article){
 			$user = $userModel->findOne($article['user_id']);
-			$articles[$key]['author'] = $user->username;
+			$articles[$key]['author'] = $user['username'];
 		}
 
 		// Get number of published articles
@@ -114,11 +114,11 @@ class Articles extends Controller {
 	public function article(){
 		$articleModel = new Article();
 		$data = Application::$app->request->get();
-		$article = $articleModel->findOne($data['article_id']);
+		$article = $articleModel->findOne($data['article_id'], PDO::FETCH_OBJ);
 		if($article){
 			$userModel = new User();
 			$user = $userModel->findOne($article->user_id);
-			$article->author = $user->username;
+			$article->author = $user['username'];
 			$this->view('article', ['article' => $article]);
 		} else {
 			Application::$app->request->redirect('articles', 'index');
@@ -198,7 +198,7 @@ class Articles extends Controller {
 			}
 		} else {
 			$data = Application::$app->request->get();
-			$article = $articleModel->findOne($data['article_id']);
+			$article = $articleModel->findOne($data['article_id'], PDO::FETCH_OBJ);
 			$articleModel->values($article);
 		}
 		$this->view('edit', ['model' => $articleModel, 'useEditor' => true]);

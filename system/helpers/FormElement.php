@@ -146,7 +146,7 @@ class FormElement extends HtmlHelper {
 		Html::setAttribute($options, ['class' => $this->getDefaultClass('label')]);
 		// Create and store the element.
 		$this->elements['label'] = Html::label(
-			!$text === '' ? $text : $this->displayName,
+			$text !== '' ? $text : $this->displayName,
 			Html::selectAttribute('for', $options, $this->name),
 			$options
 		);

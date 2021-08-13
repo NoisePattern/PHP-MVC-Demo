@@ -276,7 +276,6 @@ abstract class Model {
 		$fields = $this->fields();
 		// Remove fields set as ignored by rules validation.
 		$fields = $this->removeIgnored($fields);
-		echo $this->updated;
 		// Create PDO placeholders.
 		$params = implode(', ', array_map(fn($name) => $name  . ' = :' . $name, $fields));
 		$primaryKey = $this->getPrimaryKey();
@@ -353,9 +352,10 @@ abstract class Model {
 	 * Queries the database for a single result, either by primary key or by array of search values.
 	 *
 	 * @param mixed $condition Either a single value for primary key search or an associative array of search parameters for the where clause.
+	 * @param int $mode The mode in which PDO should return the findOne result. Defaults to PDO::FETCH_ASSOC.
 	 * @return object The query result as object.
 	 */
-	public function findOne($condition){
+	public function findOne($condition, $mode = PDO::FETCH_ASSOC){
 		$this->beforeFind();
 		$tableName = $this->tableName();
 		if(is_array($condition)){
@@ -373,8 +373,12 @@ abstract class Model {
 		} else {
 			$statement->bindValue(':' . $primary, $condition);
 		}
-		$statement->execute();
-		$result = $statement->fetchObject();
+		try {
+			$statement->execute();
+		} catch (Exception $e){
+			echo $e->getMessage();
+		}
+		$result = $statement->fetch($mode);
 		$this->afterFind($result);
 		return $result;
 	}
@@ -387,9 +391,10 @@ abstract class Model {
 	 * - orderBy: an array where first entry is the column name to order by, and second value is direction, either ASC or DESC string.
 	 * - limit: The limit value.
 	 * - offset: The offset value.
+	 * @param int $mode The mode in which PDO should return the fetchAll result. Defaults to PDO::FETCH_ASSOC.
 	 * @return array Returns a result set.
 	 */
-	public function findAll($condition, $params){
+	public function findAll($condition = [], $params = [], $mode = PDO::FETCH_ASSOC){
 		$this->beforeFind();
 		$tableName = $this->tableName();
 		$sql = 'SELECT * FROM ' . $tableName;
@@ -425,7 +430,7 @@ abstract class Model {
 			}
 		}
 		$statement->execute();
-		$result = $statement->fetchAll();
+		$result = $statement->fetchAll($mode);
 		$this->afterFind($result);
 		return $result;
 	}

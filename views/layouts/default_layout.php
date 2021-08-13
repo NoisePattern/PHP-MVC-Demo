@@ -11,7 +11,7 @@
 		<!-- Summernote editor CSS -->
 		<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
 		<?php } ?>
-		<link rel="stylesheet" href="<?php echo URLROOT; ?>/www/css/style.css">
+		<link rel="stylesheet" href="<?php echo URLROOT; ?>/css/style.css">
 	</head>
 	<body>
 		<nav id="navside" class="navbar navbar-expand-md py-0">
@@ -33,6 +33,14 @@
 							<?php if(Auth::authorize('admin', Application::$app->controller->permissions())){ ?>
 								<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/admin'; ?>">Article management</a></li>
 							<?php } ?>
+						</ul>
+					</li>
+					<li class="nav-item dropdown px-3">
+						<a class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" href="#">GALLERIES</a>
+						<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+						<?php if(Auth::authorize('admin', Application::$app->controller->permissions())){ ?>
+								<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/galleryadmin'; ?>">Gallery management</a></li>
+						<?php } ?>
 						</ul>
 					</li>
 					<?php if(Session::isLogged()){ ?>

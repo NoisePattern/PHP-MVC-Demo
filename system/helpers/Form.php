@@ -15,6 +15,9 @@ class Form extends HtmlHelper {
 	public function openForm($action, $method, $options = []){
 		// Novalidate attribute skips Bootstrap's pre-validation.
 		$html = '<form action="' . $action . '" method="' . $method . '"';
+		if(isset($options['id'])){
+			$html .= ' id="' . $options['id'] . '"';
+		}
 		if(isset($options['class'])){
 			$html .= ' class="' . $options['class'] . '"';
 		}
@@ -50,7 +53,7 @@ class Form extends HtmlHelper {
 	 * - noErrorMessage: If set, error message elements are omitted. This is useful when grouping elements and a common error message is inserted to non-standard position.
 	 * @return object Returns FormElement object, the HTML result can be echoed due to __toString() magic method in the object.
 	 */
-	public function using($model = '', $name = '', $options = []){
+	public function using($model = '', $name = '', $options = []) : FormElement {
 		return new FormElement($model, $name, $options);
 	}
 }

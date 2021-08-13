@@ -2,5 +2,5 @@ Options -Indexes
 <IfModule mod_rewrite.c>
 	RewriteEngine on
 	RewriteCond %{REQUEST_URI} !www/
-	RewriteRule (.*) www/ [L]
+	RewriteRule ^(.*)$ www/$1 [L]
 </IfModule>

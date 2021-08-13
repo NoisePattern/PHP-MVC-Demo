@@ -21,6 +21,8 @@ Requires a database connection (tested on Apache & MySQL).
 
 The config.php.example under config directory must be renamed to config.php. Database connection details should be written to its defines and the URLROOT define should be set to point to the project's location (default is 'localhost/mvc_demo').
 
+Where applicable, the owner of 'www/galleries' directory should be set appropriately as PHP will be creating subdirectories and loading images under it.
+
 Necessary table are created by migrations system. After database settings are in config.php, on a terminal move to project root and run 'php migrations.php' to set up necessary tables.
 
 ## TODO
