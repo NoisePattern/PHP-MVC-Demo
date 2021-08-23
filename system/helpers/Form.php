@@ -25,7 +25,7 @@ class Form extends HtmlHelper {
 			$html .= ' novalidate';
 		}
 		if(isset($options['enctype'])){
-			$html .= ' enctyle="' . $options['enctype'] . '"';
+			$html .= ' enctype="' . $options['enctype'] . '"';
 		}
 		$html .= '>';
 		return $html;

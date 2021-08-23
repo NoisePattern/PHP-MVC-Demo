@@ -17,11 +17,27 @@ $columns = [
 	],
 	[
 		'columnLabel' => '',
-		'buttonLink' => ['text' => 'Edit', 'route' => 'articles/edit', 'params' => ['article_id'], 'options' => ['class' => 'btn btn-primary btn-sm']]
+		'html' => [
+			'element' => 'a',
+			'params' => [
+				URLROOT . '/articles/edit',
+				['article_id' => '{article_id}'],
+				'Edit',
+				['class' => 'btn btn-primary btn-sm']
+			]
+		]
 	],
 	[
 		'columnLabel' => '',
-		'buttonLink' => ['text' => 'Delete', 'route' => 'articles/delete', 'params' => ['article_id'], 'options' => ['class' => 'btn btn-primary btn-sm']]
+		'html' => [
+			'element' => 'a',
+			'params' => [
+				URLROOT . '/articles/delete',
+				['article_id' => '{article_id}'],
+				'Delete',
+				['class' => 'btn btn-danger btn-sm']
+			]
+		]
 	]
 ];
 $table = new Table($model, $columns, $articles);

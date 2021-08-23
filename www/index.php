@@ -37,9 +37,14 @@
 	$app->router->addRoute('/users/login', 'Users', 'login');
 	$app->router->addRoute('/users/logout', 'Users', 'logout');
 	$app->router->addRoute('/users/register', 'Users', 'register');
+	$app->router->addRoute('/galleries/index', 'Galleries', 'index');
 	$app->router->addRoute('/galleries/galleryadmin', 'Galleries', 'galleryadmin');
 	$app->router->addRoute('/galleries/galleryadd', 'Galleries', 'galleryadd');
 	$app->router->addRoute('/galleries/gallerydelete', 'Galleries', 'gallerydelete');
+	$app->router->addRoute('/galleries/imageadmin', 'Galleries', 'imageadmin');
+	$app->router->addRoute('/galleries/myimages', 'Galleries', 'myimages');
+	$app->router->addRoute('/galleries/imageadd', 'Galleries', 'imageadd');
+	$app->router->addRoute('/galleries/imagedelete', 'Galleries', 'imagedelete');
 
 	$app->execute();
 ?>

@@ -1,2 +1,3 @@
-config/config.php
-www/galleries/
+/config/config.php
+/www/gallery/**
+!/www/gallery/thumb.php

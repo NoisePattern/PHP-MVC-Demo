@@ -255,7 +255,7 @@ abstract class Model {
 		$statement = $this->db->prepare('INSERT INTO ' . $tableName . ' ( ' . implode(', ', $fields) . ') VALUES (' . implode(', ', $params) . ')');
 		// Bind values to placeholders.
 		foreach($fields as $field){
-			$statement->bindValue(':' . $field, $this->{$field});
+			$this->binder($statement, ':' . $field, $this->{$field});
 		}
 		if($statement->execute()){
 			$this->afterSave();
@@ -283,7 +283,7 @@ abstract class Model {
 		$statement = $this->db->prepare('UPDATE ' . $tableName . ' SET ' . $params . ' WHERE ' . $where);
 		// Bind values to placeholders.
 		foreach($fields as $field){
-			$statement->bindValue(':' . $field, $this->{$field});
+			$this->binder($statement, ':' . $field, $this->{$field});
 		}
 		$statement->bindValue(':' . $primaryKey, $this->{$primaryKey});
 		if($statement->execute()){
@@ -303,7 +303,7 @@ abstract class Model {
 		$tableName = $this->tableName();
 		$primaryKey = $this->getPrimaryKey();
 		$statement = $this->db->prepare('DELETE FROM ' . $tableName . ' WHERE ' . $primaryKey . ' =:' . $primaryKey . ' LIMIT 1');
-		$statement->bindValue(':' . $primaryKey, $id);
+		$this->binder($statement, ':' . $primaryKey, $id);
 		if($statement->execute()){
 			return true;
 		} else {
@@ -342,36 +342,64 @@ abstract class Model {
 		if($where !== '') $sql .= ' WHERE ' . $where;
 		$statement = $this->db->prepare($sql);
 		foreach($condition as $key => $value){
-			$statement->bindValue(':'.$key, $value);
+			$this->binder($statement, ':' . $key, $value);
 		}
 		$statement->execute();
 		return $statement->fetchColumn();
 	}
 
 	/**
-	 * Queries the database for a single result, either by primary key or by array of search values.
+	 * Queries the database for a single result, either by primary key or by array of search values. Result will be limited to one entry.
 	 *
-	 * @param mixed $condition Either a single value for primary key search or an associative array of search parameters for the where clause.
+	 * @param mixed $condition Either a single value or an associative array. Set as empty array to have no conditions.
+	 * - If a single value: value is treated as primary key search value.
+	 * - If an array: each key is treated as column to search on and the value as the value to search for. Multiple array entries are connected
+	 * with an AND statement. If the value is an array, it will be turned into an IN() statement for all of its values.
 	 * @param int $mode The mode in which PDO should return the findOne result. Defaults to PDO::FETCH_ASSOC.
-	 * @return object The query result as object.
+	 * @return object The query result as object, limited to one entry with LIMIT 1.
 	 */
-	public function findOne($condition, $mode = PDO::FETCH_ASSOC){
+	public function findOne($condition = [], $params = [], $mode = PDO::FETCH_ASSOC){
 		$this->beforeFind();
 		$tableName = $this->tableName();
-		if(is_array($condition)){
-			$fields = array_keys($condition);
-			$sql = implode(" AND ", array_map(fn($field) => $field . ' = :'.$field, $fields));
-		} else {
-			$primary = $this->getPrimaryKey();
-			$sql = $primary . ' = :' . $primary;
-		}
-		$statement = $this->db->prepare('SELECT * FROM ' . $tableName . ' WHERE ' . $sql);
+		$sql = '';
+		$bindValues = [];
+
 		if(is_array($condition)){
 			foreach($condition as $key => $value){
-				$statement->bindValue(':'.$key, $value);
+				if(is_array($value)){
+					$sql .= $key . ' IN (';
+					foreach($value as $inKey => $inValue){
+						$sql .= ':' . $key . $inKey;
+						if($inKey !== array_key_last($value)) $sql .= ', ';
+						$bindValues[':' . $key . $inKey] = $inValue;
+					}
+					$sql .= ') ';
+				} else {
+					$sql .= $key . ' = :' . $key . ' ';
+					$bindValues[':' . $key] = $value;
+				}
+				if($key !== array_key_last($condition)) $sql .= 'AND ';
 			}
 		} else {
-			$statement->bindValue(':' . $primary, $condition);
+			$primary = $this->getPrimaryKey();
+			$sql = $primary . ' = :' . $primary . ' ';
+			$bindValues[':' . $primary] = $condition;
+		}
+
+		// If there is orderBy param. Note: column name strings cannot be set as placeholders (column order numbers could though)
+		// so model column names are used as a filter check to permit the passing of a string value to the statement.
+		if(array_key_exists('orderBy', $params)){
+			// Make sure the column name exists in model and direction is ASC or DESC
+			if(property_exists($this, $params['orderBy'][0]) ){
+				$sql .= ' ORDER BY ' . $params['orderBy'][0];
+				if(strtolower($params['orderBy'][1]) === 'asc') $sql .= ' ASC';
+				else if(strtolower($params['orderBy'][1]) === 'desc') $sql .= ' DESC';
+			}
+		}
+
+		$statement = $this->db->prepare('SELECT * FROM ' . $tableName . ' WHERE ' . $sql . ' LIMIT 1');
+		foreach($bindValues as $key => $value){
+			$this->binder($statement, $key, $value);
 		}
 		try {
 			$statement->execute();
@@ -386,7 +414,9 @@ abstract class Model {
 	/**
 	 * Queries the database for multiple results that match the conditions, and applies given additional parameters to query.
 	 *
-	 * @param array $condition An associative array of search parameters for the where clause. Set empty array for no conditions.
+	 * @param array $condition An associative array of search parameters for the where clause. Multiple array entries will be connected with
+	 * an AND statement. If a value is an array, it will be turned into an IN() statement for all its values. If $condition is empty, no
+	 * WHERE statement is added.
 	 * @param array $params Additional query params array. Supports:
 	 * - orderBy: an array where first entry is the column name to order by, and second value is direction, either ASC or DESC string.
 	 * - limit: The limit value.
@@ -397,14 +427,32 @@ abstract class Model {
 	public function findAll($condition = [], $params = [], $mode = PDO::FETCH_ASSOC){
 		$this->beforeFind();
 		$tableName = $this->tableName();
-		$sql = 'SELECT * FROM ' . $tableName;
+		$sql = '';
+		$bindValues = [];
+
 		if(!empty($condition)){
-			$fields = array_keys($condition);
-			$sql .= ' WHERE ' . implode(" AND ", array_map(fn($field) => $field . ' = :'.$field, $fields));
+			$sql .= ' WHERE ';
+			foreach($condition as $key => $value){
+				if(is_array($value)){
+					$sql .= $key . ' IN (';
+					foreach($value as $inKey => $inValue){
+						$sql .= ':' . $key . $inKey;
+						if($inKey !== array_key_last($value)) $sql .= ', ';
+						$bindValues[':' . $key . $inKey] = $inValue;
+					}
+					$sql .= ') ';
+				} else {
+					$sql .= $key . ' = :' . $key . ' ';
+					$bindValues[':' . $key] = $value;
+				}
+				if($key !== array_key_last($condition)) $sql .= 'AND ';
+			}
 		}
-		// If there is orderBy param.
+
+		// If there is orderBy param. Note: column name strings cannot be set as placeholders (column order numbers could though)
+		// so model column names are used as a filter check to permit the passing of a string value to the statement.
 		if(array_key_exists('orderBy', $params)){
-			// Make sure the column exists in model and direction is ASC or DESC
+			// Make sure the column name exists in model and direction is ASC or DESC
 			if(property_exists($this, $params['orderBy'][0]) ){
 				$sql .= ' ORDER BY ' . $params['orderBy'][0];
 				if(strtolower($params['orderBy'][1]) === 'asc') $sql .= ' ASC';
@@ -414,25 +462,43 @@ abstract class Model {
 		// If there is limit param.
 		if(array_key_exists('limit', $params) && $params['limit'] > 0){
 			$sql .= ' LIMIT :limit';
+			$bindValues[':limit'] = $params['limit'];
 			// If there is offset param.
 			if(array_key_exists('offset', $params)){
 				$sql .= ' OFFSET :offset';
+				$bindValues[':offset'] = $params['offset'];
 			}
 		}
-		$statement = $this->db->prepare($sql);
-		foreach($condition as $key => $value){
-			$statement->bindValue(':'.$key, $value);
+
+		$statement = $this->db->prepare('SELECT * FROM ' . $tableName . $sql);
+		foreach($bindValues as $key => $value){
+			$this->binder($statement, $key, $value);
 		}
-		if(array_key_exists('limit', $params) && $params['limit'] > 0){
-			$statement->bindValue(':limit', $params['limit'], PDO::PARAM_INT);
-			if(array_key_exists('offset', $params)){
-				$statement->bindValue(':offset', $params['offset'], PDO::PARAM_INT);
-			}
-		}
+
 		$statement->execute();
 		$result = $statement->fetchAll($mode);
-		$this->afterFind($result);
+		foreach($result as &$item){
+			$this->afterFind($item);
+		}
 		return $result;
+	}
+
+	/**
+	 * Binds a value to a parameter on given statement.
+	 *
+	 * @param object &$statement The statement to bind on.
+	 * @param string $param Parameter to bind to.
+	 * @param int|string $value Value to bind.
+	 * @param int $type Parameter type as PDO param constant. If not given, the function will try to figure it out.
+	 */
+	public function binder(&$statement, $param, $value, $type = null){
+		if(is_null($type)){
+			if(is_null($value)) $type = PDO::PARAM_NULL;
+			else if(is_int($value)) $type = PDO::PARAM_INT;
+			else if(is_bool($value)) $type = PDO::PARAM_BOOL;
+			else $type = PDO::PARAM_STR;
+		}
+		$statement->bindValue($param, $value, $type);
 	}
 
 	/**

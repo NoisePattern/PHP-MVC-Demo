@@ -7,7 +7,8 @@ class Galleries extends Controller {
 	public function useModels(){
 		return [
 			'Gallery',
-			'GalleryImages'
+			'GalleryImage',
+			'User'
 		];
 	}
 
@@ -24,6 +25,18 @@ class Galleries extends Controller {
 			],
 			'gallerydelete' => [
 				'setting' => ['level' => [2]]
+			],
+			'imageadmin' => [
+				'setting' => ['level' => [2]]
+			],
+			'myimages' => [
+				'login' => true
+			],
+			'imageadd' => [
+				'login' => true
+			],
+			'imagedelete' => [
+				'login' => true
 			]
 		];
 	}
@@ -32,7 +45,30 @@ class Galleries extends Controller {
 	 * View gallery.
 	 */
 	public function index(){
+		$selectedGallery = null;					// Gallery selection dropdown's current selection.
+		$images = [];								// Images in selected gallery.
+		$galleryModel = new Gallery();
+		$imageModel = new GalleryImage();
 
+		// Gallery selection from dropdown.
+		if(Application::$app->request->isPost()){
+			$data = Application::$app->request->post();
+			if(isset($data['selectedGallery'])) $selectedGallery = $data['selectedGallery'];
+		}
+
+		// Create dropdown content of all published galleries.
+		$allGalleries = $galleryModel->findAll(['public' => 1], ['orderBy' => ['name', 'asc']]);
+		$selectOptions = $this->buildOptions($allGalleries, $selectedGallery, "&nbsp;&nbsp;&nbsp;&nbsp;");
+
+		// Get images in selected gallery.
+		if($selectedGallery){
+			$gallery = $galleryModel->findOne($selectedGallery);
+			$galleryModel->values($gallery);
+			$images = $imageModel->findAll(['gallery_id' => $selectedGallery], ['orderBy' => ['created', 'desc']]);
+		}
+		$galleryModel->selectedGallery = $selectedGallery;
+
+		$this->view('index', ['galleryModel' => $galleryModel, 'selectOptions' => $selectOptions,'images' => $images]);
 	}
 
 	/**
@@ -40,8 +76,6 @@ class Galleries extends Controller {
 	 */
 	public function galleryadmin(){
 		$selectedGallery = null;					// Gallery selection dropdown's current selection.
-		$selectOptions = [];						// List of galleries in gallery selection dropdown.
-		$parentSelectOptions = [];					// List of valid parents for gallery in gallery settings.
 		$galleryModel = new Gallery();
 
 		// If post data was sent from either form on page.
@@ -68,11 +102,12 @@ class Galleries extends Controller {
 			}
 		}
 
-		$allGalleries = $galleryModel->findAll();
 		// Get all galleries and format them to tree structure.
-		$selectOptions = $this->buildTreeFlat($allGalleries, "&nbsp;&nbsp;&nbsp;&nbsp;", true);
+		$allGalleries = $galleryModel->findAll([], ['orderBy' => ['name', 'asc']]);
+		$selectOptions = $this->buildOptions($allGalleries, $selectedGallery, "&nbsp;&nbsp;&nbsp;&nbsp;");
 		// Generate parent gallery changer select's content, omit the current gallery from choices.
-		$parentSelectOptions = $this->buildTreeFlat($allGalleries, "&nbsp;&nbsp;&nbsp;&nbsp;", true, $selectedGallery);
+		$parentSelectOptions[0] = ['text' => 'None', 'options' => ['value' => '']];
+		$parentSelectOptions += $this->buildOptions($allGalleries, $galleryModel->parent_id, "&nbsp;&nbsp;&nbsp;&nbsp;", $selectedGallery);
 		// Set selection to gallery select dropdown.
 		$galleryModel->selectedGallery = $selectedGallery;
 		$this->view(
@@ -80,7 +115,6 @@ class Galleries extends Controller {
 			[
 				'galleryModel' => $galleryModel,
 				'selectOptions' => $selectOptions,
-				'selectedGallery' => $selectedGallery,
 				'parentSelectOptions' => $parentSelectOptions
 			]
 		);
@@ -90,7 +124,82 @@ class Galleries extends Controller {
 	 * Manage images in gallery.
 	 */
 	public function imageadmin(){
+		$pageSize = 10;
+		$page = 0;
+		$total = 0;
+		$selectedGallery = 0;
+		$images = [];
+		$galleryModel = new Gallery();
+		$imageModel = new GalleryImage();
 
+		// If pagenav link was clicked.
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			if(isset($data['selectedGallery'])) $selectedGallery = $data['selectedGallery'];
+			if(isset($data['page'])) $page = $data['page'];
+		}
+
+		// If gallery was selected from gallery dropdown.
+		else if(Application::$app->request->isPost()){
+			$data = Application::$app->request->post();
+			if(array_key_exists('selectedGallery', $data)){
+				$selectedGallery = $data['selectedGallery'];
+			}
+		}
+
+		// Get images in selected gallery or all galleries and their count.
+		if($selectedGallery > 0){
+			$images = $imageModel->findAll(['gallery_id' => $selectedGallery], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'desc']]);
+			$total = $imageModel->count(['gallery_id' => $selectedGallery]);
+		} else {
+			$images = $imageModel->findAll([], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'desc']]);
+			$total = $imageModel->count();
+		}
+
+		// Get all galleries and format them to tree structure for the dropdown.
+		$selectOptions[0] = ['text' => 'All galleries', 'options' => ['value' => 0]];
+		if($selectedGallery == 0) $selectOptions[0]['options']['selected'] = 'selected';
+		$allGalleries = $galleryModel->findAll([], ['orderBy' => ['name', 'asc']]);
+		$selectOptions += $this->buildOptions($allGalleries, $selectedGallery, "&nbsp;&nbsp;&nbsp;&nbsp;");
+		$galleryModel->selectedGallery = $selectedGallery;
+
+		$this->view('imageadmin', [
+			'galleryModel' => $galleryModel,
+			'imageModel' => $imageModel,
+			'selectOptions' => $selectOptions,
+			'images' => $images,
+			'page' => $page,
+			'pageSize' => $pageSize,
+			'total' => $total
+		]);
+	}
+
+	/**
+	 * User's image management.
+	 */
+	public function myimages(){
+		$pageSize = 10;
+		$page = 0;
+
+		// If pagenav link was clicked.
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			if(isset($data['selectedGallery'])) $selectedGallery = $data['selectedGallery'];
+			if(isset($data['page'])) $page = $data['page'];
+		}
+
+		// Get all images of current user.
+		$imageModel = new GalleryImage();
+		$images = $imageModel->findAll(['user_id' => Session::getKey('user_id')], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['name', 'asc']]);
+		$total = $imageModel->count(['user_id' => Session::getKey('user_id')]);
+
+		$this->view('myimages', [
+			'imageModel' => $imageModel,
+			'images' => $images,
+			'page' => $page,
+			'pageSize' => $pageSize,
+			'total' => $total
+		]);
 	}
 
 	/**
@@ -98,8 +207,7 @@ class Galleries extends Controller {
 	 */
 	public function galleryadd(){
 		$galleryModel = new Gallery();
-		$allGalleries = $galleryModel->findAll();
-		$selectOptions = $this->buildTreeFlat($allGalleries, "&nbsp;&nbsp;&nbsp;&nbsp;", true);
+
 		if(Application::$app->request->isPost()){
 			$galleryModel->values(Application::$app->request->post());
 			if($galleryModel->validate()){
@@ -114,6 +222,10 @@ class Galleries extends Controller {
 				}
 			}
 		}
+		// Parent gallery selector's dropdown content.
+		$allGalleries = $galleryModel->findAll();
+		$selectOptions[0] = ['text' => 'None', 'options' => ['value' => '']];
+		$selectOptions += $this->buildOptions($allGalleries, $galleryModel->parent_id, "&nbsp;&nbsp;&nbsp;&nbsp;");
 		$this->view('galleryadd', ['model' => $galleryModel, 'selectOptions' => $selectOptions]);
 	}
 
@@ -121,81 +233,158 @@ class Galleries extends Controller {
 	 * Remove gallery.
 	 */
 	public function gallerydelete(){
-		$galleryModel = new Gallery();
-		$data = Application::$app->request->get();
-		$gallery = $galleryModel->findOne(['gallery_id' => $data['gallery_id']]);
-		// Delete files gallery.
-		// Implement once image management is written.
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			$this->recursiveDelete($data['gallery_id']);
+			Session::setFlash('success', 'Gallery and its subgalleries with all of their images have been removed.');
+			Application::$app->request->redirect('galleries', 'galleryadmin');
+		}
+	}
 
-		// Delete directory and database entry.
-		rmdir(APPROOT . 'www/galleries/' . $gallery['filepath']);
+	/**
+	 * Recursively deletes a gallery and all of its subgalleries.
+	 */
+	private function recursiveDelete($gallery_id){
+		$galleryModel = new Gallery();
+		$imageModel = new GalleryImage();
+
+		// Find and loop through all subgalleries.
+		$children = $galleryModel->findAll(['parent_id' => $gallery_id]);
+		foreach($children as $child){
+			$this->recursiveDelete($child['gallery_id']);
+		}
+
+		$gallery = $galleryModel->findOne(['gallery_id' => $gallery_id]);
+
+		// Get the gallery's images.
+		$images = $imageModel->findAll(['gallery_id' => $gallery_id]);
+		foreach($images as $image){
+			$this->deleteOneImage($image, $imageModel, $gallery);
+		}
+
+		// Delete gallery's directory and database entry.
+		echo 'DELETING ' . $gallery['name'] . '<br>';
+		if(is_dir(APPROOT . 'www/gallery/' . $gallery['filepath'])){
+			rmdir(APPROOT . 'www/gallery/' . $gallery['filepath']);
+		}
 		$galleryModel->delete($gallery['gallery_id']);
-		Session::setFlash('success', 'Gallery has been removed.' . APPROOT . 'www/galleries/' . $gallery['filepath']);
-		Application::$app->request->redirect('galleries', 'galleryadmin');
 	}
 
 	/**
 	 * Add image to gallery.
 	 */
 	public function imageadd(){
+		$galleryModel = new Gallery();
+		$imageModel = new GalleryImage();
 
-	}
-
-	/**
-	 * Remove image(s) from gallery.
-	 */
-	public function imageremove(){
-
-	}
-
-	/**
-	 * Creates a tree structure out of gallery data where subgalleries are set to child array.
-	 *
-	 * @param array $galleries Array of gallery entries from database.
-	 * @param int|null $parent Gallery id where tree build is started from, null means top. Defaults to null.
-	 * @return array Returns array of galleries organized in tree form.
-	 */
-	private function buildTree($galleries, $parent = NULL){
-		$branch = [];
-		foreach($galleries as $key => $gallery){
-			unset($galleries[$key]);
-			if($gallery['parent_id'] == $parent){
-				$children = $this->buildTree($galleries, $gallery['gallery_id']);
-				$gallery['children'] = $children;
-				$branch[] = $gallery;
+		if(Application::$app->request->isPost()){
+			$imageModel->values(Application::$app->request->post());
+			// Create filename for uploaded image.
+			$filename = $_FILES['imageFile']['name'];
+			$extension = substr($filename, strrpos($filename, '.'));
+			$uploadname = $imageModel->createName() . $extension;
+			$imageModel->filename = $uploadname;
+			if($imageModel->validate()){
+				$gallery = $galleryModel->findOne($imageModel->gallery_id);
+				// Move image into gallery.
+				if(move_uploaded_file($_FILES['imageFile']['tmp_name'], APPROOT . 'www/gallery/' . $gallery['filepath'] . '/' . $uploadname)){
+					if($imageModel->save()){
+						Session::setFlashRender('success', 'Image has been uploaded.');
+					} else {
+						Session::setFlashRender('error', 'There was a problem uploading the image.');
+						// Remove file.
+						unlink(APPROOT . 'www/gallery/' . $gallery['filepath'] . '/' . $uploadname);
+					}
+				} else {
+					Session::setFlashRender('error', 'There was a problem uploading the image.');
+				}
 			}
 		}
-		return $branch;
+
+		$allGalleries = $galleryModel->findAll([], ['orderBy' => ['name', 'asc']]);
+		$selectOptions = $this->buildOptions($allGalleries, $galleryModel->selectedGallery, '&nbsp;&nbsp;&nbsp;&nbsp;');
+		$this->view('imageadd', ['model' => $imageModel, 'selectOptions' => $selectOptions]);
 	}
 
 	/**
-	 * Creates a tree structure out of gallery data where all galleries are at same array depth but subgallery names are indented.
+	 * Remove image from gallery.
+	 */
+	public function imagedelete(){
+		// Multiple pages can send to delete action, redirect must send back to correct page.
+		$sender = Application::$app->request->getReferer();
+		$options = [];
+		if(Application::$app->request->isGet()){
+			$data = Application::$app->request->get();
+			$imageModel = new GalleryImage();
+			$image = $imageModel->findOne($data['image_id']);
+			$galleryModel = new Gallery();
+			$gallery = $galleryModel->findOne($image['gallery_id']);
+			// Remove database entry.
+			if($this->deleteOneImage($image, $imageModel, $gallery)){
+				Session::setFlash('success', 'Image has been removed.');
+			} else {
+				Session::setFlash('error' , 'Image could not be removed');
+			}
+			// If link contained gallery selection data, forward it to redirected page.
+			if(isset($data['selectedGallery'])) $options['selectedGallery'] = $data['selectedGallery'];
+		}
+		if($sender){
+			Application::$app->request->redirect($sender['controller'], $sender['action'], $options);
+		} else {
+			Application::$app->request->redirect('galleries', 'myimages', $options);
+		}
+	}
+
+	/**
+	 * Deletes image with given id from database and removes its image and thumbnails from gallery directory.
+	 */
+	private function deleteOneImage($imageData, $imageModel, $galleryData){
+		if($imageModel->delete($imageData['image_id'])){
+			// Remove image and thumbnails from directory.
+			$files = new DirectoryIterator('../www/gallery/' . $galleryData['filepath'] . '/');
+			foreach($files as $file){
+				if(stripos($file, $imageData['filename']) !== false){
+					unlink('../www/gallery/' . $galleryData['filepath']. '/' . $file);
+				}
+			}
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Creates a select option list out of gallery data in tree order, indenting subgalleries.
 	 *
 	 * @param array $galleries Array of gallery entries from database.
+	 * @param int $selected Gallery that should be set selected. Set to null to not set anything. Defaults to null.
 	 * @param string $indent The string to indent gallery names with. Gets duplicated for each sub-gallery step.
-	 * @param bool $forSelect If set true, result is formatted into a key-value array for use in select elements. Otherwise all gallery data is set into the array. Default is false.
 	 * @param int $depth Depth counter. Default start value is zero.
-	 * @param int|null $omit Gallery id to skip when constructing the tree. Defaults to null.
+	 * @param int|null $omit Gallery id to skip when constructing the tree, also skips all of its subgalleries. Defaults to null.
 	 * @param int|null $parent Gallery id where tree build is started from, null means top. Defaults to null.
 	 * @param array Returns array of galleries organized in tree form.
 	 */
-	private function buildTreeFlat($galleries, $indent, $forSelect = false, $omit = null, $depth = 0, $parent = NULL){
-		$branch = [];
+	private function buildOptions($galleries, $selected = null, $indent, $omit = null, $depth = 0, $parent = null){
+		$options = [];
+		// Loop through all galleries.
 		foreach($galleries as $key => $gallery){
-			unset($galleries[$key]);
 			if($gallery['gallery_id'] == $omit) continue;
 			if($gallery['parent_id'] == $parent){
-				$gallery['name'] = str_repeat($indent, $depth) . $gallery['name'];
-				if($forSelect){
-					$branch[$gallery['gallery_id']] = $gallery['name'];
-				} else {
-					$branch[] = $gallery;
+				// Remove processed galleries to make the loop shorter.
+				unset($galleries[$key]);
+				// Create content array.
+				$content = [];
+				$content['text'] = str_repeat($indent, $depth) . $gallery['name'];
+				$content['options']['value'] = $gallery['gallery_id'];
+				if($gallery['gallery_id'] == $selected){
+					$content['options']['selected'] = 'selected';
 				}
-				$children = $this->buildTreeFlat($galleries, $indent, $forSelect, $omit, $depth + 1, $gallery['gallery_id']);
-				$branch = $branch + $children;
+				$options[$gallery['gallery_id']] = $content;
+				// Recurse this gallery's subgalleries to make them appear beneath it.
+				$children = $this->buildOptions($galleries, $selected, $indent, $omit, $depth + 1, $gallery['gallery_id']);
+				$options = $options + $children;
 			}
 		}
-		return $branch;
+		return $options;
 	}
 }
 

@@ -95,15 +95,8 @@ class Article extends Model {
 
 	public function afterFind(&$result){
 		$userModel = new User();
-		if(is_array($result)){
-			foreach($result as $key => $article){
-				$thisUser = $userModel->findOne($article['user_id']);
-				$result[$key]['author'] = $thisUser['username'];
-			}
-		} else {
-			$thisUser = $userModel->findOne($result->user_id);
-			$result->author = $thisUser['username'];
-		}
+		$thisUser = $userModel->findOne($result['user_id']);
+		$result['author'] = $thisUser['username'];
 	}
 }
 ?>

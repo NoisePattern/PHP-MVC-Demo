@@ -75,20 +75,24 @@ class Gallery extends Model {
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */
 	public function beforeSave(){
-		// When new gallery is created, randomize a unique filepath name.
-		if($this->isCreate()){
-			do {
-				$path = $this->createPath();
-			} while(is_dir(APPROOT . 'www/galleries/' . $path));
-			mkdir(APPROOT . 'www/galleries/' . $path, 0744);
-			$this->filepath = $path;
-		}
+		// If parent is not set, set it to null value.
+		if(empty($this->parent_id)) $this->parent_id = null;
 	}
 
 	/**
 	 * Post-save operations. If model successfully inserted or updated, this action runs.
 	 */
 	public function afterSave(){
+		// When new gallery is created, randomize a unique filepath name.
+		if($this->isCreate()){
+			$this->gallery_id = $this->db->lastInsertId();
+			do {
+				$path = $this->createPath();
+			} while(is_dir(APPROOT . 'www/gallery/' . $path));
+			mkdir(APPROOT . 'www/gallery/' . $path, 0744);
+			$this->filepath = $path;
+			$this->update();
+		}
 	}
 
 	/**

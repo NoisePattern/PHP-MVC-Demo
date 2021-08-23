@@ -1,11 +1,6 @@
-<h1>Gallery admin</h1>
+<h1>Gallery management</h1>
 <br>
 <?php
-
-// TODO:
-// - gallery selection dropdown.
-// - For selected gallery: name change, public checkbox, delete button, move under another gallery dropdown.
-// - Name and public under 'Update settings', move option under 'move gallery', delete under 'Remove gallery'.
 
 // Gallery selection form.
 $form = new Form();
@@ -24,7 +19,7 @@ if(isset($galleryModel->gallery_id)){
 	echo $form->using($galleryModel, 'gallery_id')->hidden();
 	echo $form->using($galleryModel, 'name')->input('text')->wrap(['class' => 'mb-3']);
 	echo $form->using($galleryModel, 'parent_id')->select($parentSelectOptions)->wrap(['class' => 'mb-3']);
-	echo $form->using($galleryModel, 'public')->checkbox()->label($galleryModel->getLabel('public') . ' (turning a gallery private will also hide all of its subgalleries)')->wrap(['class' => 'form-check mb-3']);
+	echo $form->using($galleryModel, 'public')->checkbox()->label($galleryModel->getLabel('public') . ' (if gallery is not public, none of its subgalleries can be viewed)')->wrap(['class' => 'form-check mb-3']);
 	echo $form->using()->button('submit', 'Save settings', ['name' => 'update'])->label(false)->wrap(['noWrap' => true]);
 	echo html::a(URLROOT . '/galleries/gallerydelete', ['gallery_id' => $galleryModel->gallery_id], 'Delete gallery', ['id' => 'delete', 'class' => 'ms-4 btn btn-danger']);
 	echo $form->closeForm();

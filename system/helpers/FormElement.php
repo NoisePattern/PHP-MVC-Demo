@@ -227,10 +227,17 @@ class FormElement extends HtmlHelper {
 		if($this->hasError && $this->errorClasses){
 			Html::addToAttribute($options, 'class', $this->getDefaultClass('error'));
 		}
+		// Set selected content.
+		foreach($content as &$thisContent){
+			if(is_array($this->model->{$this->name})){
+				if(in_array($thisContent['options']['value'], $this->model->{$this->name})) $thisContent['options']['selected'] = 'selected';
+			} else {
+				if($this->model->{$this->name} == $thisContent['options']['value']) $thisContent['options']['selected'] = 'selected';
+			}
+		}
 		// Create and store the element.
 		$this->elements['control'] = Html::select(
 			$content,
-			$this->model->{$this->name},
 			$this->name,
 			$options
 		);

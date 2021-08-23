@@ -6,13 +6,21 @@
  * attributes are brought in on the options array.
  */
 abstract class Html {
-	private static array $closedElements = ['a', 'div', 'label', 'textarea', 'select', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'button'];
+	private static array $closedElements = ['a', 'div', 'label', 'textarea', 'select', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'button', 'ul', 'li'];
 
 	private static function enclosed($name){
 		if(in_array($name, self::$closedElements)) return true;
 		return false;
 	}
 
+	/**
+	 * Builds an HTML element.
+	 *
+	 * @param string $name Name of the element.
+	 * @param string $content Content wrapped by the element, if applicable. If there is nothing to wrap, set to empty string.
+	 * @param array $attributes Attributes as key-value pairs to be set to the element.
+	 * @return string Returns the constructed element.
+	 */
 	private static function build($name, $content = '', $attributes = []){
 		$element = '<' . $name;
 		foreach($attributes as $key => $value){
@@ -168,25 +176,19 @@ abstract class Html {
 	/**
 	 * Creates a select element.
 	 *
-	 * @param array $content Array of key-value pairs to describe values and displayed text of select's option elements.
-	 * @param array|int $selected Value or values of keys in content array to be set as selected options.
+	 * @param array $content Array describing option elements. Uses following keys:
+	 * - text: a string containing option's displayable text.
+	 * - options: Array of attributes for the option element as key-value pairs.
 	 * @param string $name Name attribute of element.
 	 * @param array $options Array of attributes for the element as key-value pairs.
 	 * @return string The element formatted in HTML.
 	 */
-	public static function select($content = [], $selected, $name, $options = []){
+	public static function select($content = [], $name, $options = []){
 		$options['name'] = $name;
 		// Create select's option elements.
 		$subElement = '';
-		foreach($content as $value => $text){
-			$subOptions = [];
-			$subOptions['value'] = $value;
-			if(is_array($selected)){
-				if(in_array($value, $selected)) $subOptions['selected'] = 'selected';
-			} else {
-				if($value == $selected)  $subOptions['selected'] = 'selected';
-			}
-			$subElement .= self::build('option', $text, $subOptions);
+		foreach($content as $thisOption){
+			$subElement .= self::build('option', $thisOption['text'], $thisOption['options']);
 		}
 		return self::build('select', $subElement, $options);
 	}
@@ -280,6 +282,28 @@ abstract class Html {
 	 */
 	public static function td($content, $options = []){
 		return self::build('td', $content, $options);
+	}
+
+	/**
+	 * Creates img element.
+	 */
+	public static function img($src, $options = []){
+		$options['src'] = $src;
+		return self::build('img', '', $options);
+	}
+
+	/**
+	 * Creates li elemenet.
+	 */
+	public static function li($content, $options = []){
+		return self::build('li', $content, $options);
+	}
+
+	/**
+	 * Creates ul element.
+	 */
+	public static function ul($content, $options = []){
+		return self::build('ul', $content, $options);
 	}
 }
 

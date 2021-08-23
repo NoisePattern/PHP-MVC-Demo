@@ -139,8 +139,16 @@ class Request {
 	/**
 	 * Redirects to target page.
 	 */
-	public function redirect($controller, $action){
-		header('location:' . URLROOT . '/' . $controller . '/' . $action);
+	public function redirect($controller, $action, $params = []){
+		$paramList = '';
+		if(!empty($params)){
+			$paramList = '?';
+			foreach($params as $key => $value){
+				$paramList .= $key . '=' . $value;
+				if($key !== array_key_last($params)) $paramList .= '&';
+			}
+		}
+		header('location:' . URLROOT . '/' . $controller . '/' . $action . $paramList);
 	}
 }
 ?>

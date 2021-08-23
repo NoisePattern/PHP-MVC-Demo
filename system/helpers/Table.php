@@ -44,14 +44,19 @@ class Table extends HtmlHelper {
 				$name = $this->model->getLabel($column);
 				$cell = Html::th($name, $headCellOptions);
 			} else {
+				$thisOptions = $headCellOptions;
+				// Key 'class' indicates custom class for this column only.
+				if(array_key_exists('theadClass', $column)){
+					$thisOptions['class'] = empty($thisOptions['class']) ? $column['theadClass'] : $thisOptions['class'] . ' ' . $column['theadClass'];
+				}
 				// Key 'columnLabel' indicates text to be shown.
 				if(array_key_exists('columnLabel', $column)){
-					$cell = Html::th($column['columnLabel'], $headCellOptions);
+					$cell = Html::th($column['columnLabel'], $thisOptions);
 				}
 				// Key 'field' indicates model field's displayable name to be shown.
 				else if(array_key_exists('field', $column)){
 					$name = $this->model->getLabel($column['field']);
-					$cell = Html::th($name, $headCellOptions);
+					$cell = Html::th($name, $thisOptions);
 				}
 			}
 			$head .= $cell;
@@ -68,7 +73,6 @@ class Table extends HtmlHelper {
 				// If column is not an array, it refers to a model field.
 				if(!is_array($column)){
 					$row .= Html::td($this->rowData[$i][$column], $bodyCellOptions);
-//					$row .= '<td class="align-middle">' . $this->rowData[$i][$column] . '</td>';
 				} else {
 					// If array has key 'field' it refers to a model field.
 					if(array_key_exists('field', $column)){
@@ -100,24 +104,20 @@ class Table extends HtmlHelper {
 						}
 						$row .= Html::td($data, $bodyCellOptions);
 					}
-					else if(array_key_exists('textLink', $column)){
-						$paramName = $column['textLink']['params'];
-						$paramValue = $this->rowData[$i][$paramName];
-						$paramKey = $this->model->getLabel($paramName);
-						Html::setAttribute($column['textLink']['options'], ['class' => $this->getDefaultClass('textLink')]);
-						$link = Html::a(URLROOT . '/' . $column['textLink']['route'], [$paramKey => $paramValue], $column['textLink']['text'], $column['textLink']['options']);
-						$row .= Html::td($link, $bodyCellOptions);
-					}
-					else if(array_key_exists('buttonLink', $column)){
-						$params = [];
-						foreach($column['buttonLink']['params'] as $name){
-							$paramKey = $this->model->getLabel($name);
-							$paramValue = $this->rowData[$i][$name];
-							$params[$paramKey] = $paramValue;
+					// Pure HTML column.
+					else if(array_key_exists('html', $column)){
+						// Create string replacement table from rowData.
+						$replace = [];
+						foreach($this->rowData[$i] as $key => $value){
+							$replace['{' . $key . '}'] = $value;
 						}
-						Html::setAttribute($column['buttonLink']['options'], ['class' => $this->getDefaultClass('buttonLink')]);
-						$link = Html::a(URLROOT . '/' . $column['buttonLink']['route'], $params, $column['buttonLink']['text'], $column['buttonLink']['options']);
-						$row .= Html::td($link, $bodyCellOptions);
+						// In the attributes array, replace each rowData reference of {valuename} with referred value.
+						array_walk_recursive($column['html']['params'], function(&$attribute, $key, $replace){
+							$attribute = strtr($attribute, $replace);
+						}, $replace);
+
+						$html = call_user_func_array(array('Html', $column['html']['element']), $column['html']['params']);
+						$row .= Html::td($html, $bodyCellOptions);
 					}
 				}
 			}

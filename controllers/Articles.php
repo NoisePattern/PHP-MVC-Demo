@@ -51,13 +51,9 @@ class Articles extends Controller {
 
 		// Get articles for current page.
 		$articles = $articleModel->findAll(['published' => 1], ['limit' => $pageSize, 'offset' => $pageSize * $page, 'orderBy' => ['created', 'DESC']]);
-		foreach($articles as $key => $article){
-			$user = $userModel->findOne($article['user_id']);
-			$articles[$key]['author'] = $user['username'];
-		}
-
 		// Get number of published articles
 		$total = $articleModel->count(['published' => 1]);
+
 		$this->view('index', ['articles' => $articles, 'pageSize' => $pageSize, 'page' => $page, 'total' => $total]);
 	}
 
@@ -88,10 +84,10 @@ class Articles extends Controller {
 
 		// Create array of all users for a user selection dropdown.
 		$userModel = new User();
-		$dropdownContent = [0 => 'All users'];
+		$dropdownContent[] = ['text' => 'All users', 'options' => ['value' => '0']];
 		$users = $userModel->findAll([], ['orderBy' => ['username', 'ASC']]);
 		foreach($users as $user){
-			$dropdownContent[$user['user_id']] = $user['username'];
+			$dropdownContent[] = ['text' => $user['username'], 'options' => ['value' => $user['user_id']]];
 		}
 		$userModel->selectedUser = $selectedUser;
 
@@ -198,7 +194,7 @@ class Articles extends Controller {
 			}
 		} else {
 			$data = Application::$app->request->get();
-			$article = $articleModel->findOne($data['article_id'], PDO::FETCH_OBJ);
+			$article = $articleModel->findOne($data['article_id']);
 			$articleModel->values($article);
 		}
 		$this->view('edit', ['model' => $articleModel, 'useEditor' => true]);
@@ -210,6 +206,7 @@ class Articles extends Controller {
 	public function delete(){
 		// Multiple pages can send to delete action, redirect must send back to correct page.
 		$sender = Application::$app->request->getReferer();
+		$options = [];
 		if(Application::$app->request->isGet()){
 			$data = Application::$app->request->get();
 			$articleModel = new Article();
@@ -218,11 +215,13 @@ class Articles extends Controller {
 			} else {
 				Session::setFlash('error', 'Could not delete article.');
 			}
+			// If link contained user selection data, forward it to redirected page.
+			if(isset($data['selectedUser'])) $options['selectedUser'] = $data['selectedUser'];
 		}
 		if($sender){
-			Application::$app->request->redirect($sender['controller'], $sender['action']);
+			Application::$app->request->redirect($sender['controller'], $sender['action'], $options);
 		} else {
-			Application::$app->request->redirect('articles', 'myarticles');
+			Application::$app->request->redirect('articles', 'myarticles', $options);
 		}
 	}
 }

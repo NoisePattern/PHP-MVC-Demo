@@ -1,6 +1,6 @@
 <?php
 
-class GalleryImages extends Model {
+class GalleryImage extends Model {
 
 	/**
 	 * Name of the associated table in DB.
@@ -14,7 +14,12 @@ class GalleryImages extends Model {
 	/**
 	 * Model variables, one for each DB table field, plus any other fields the form returns (but will not save to DB).
 	 */
-	public $bar;
+	public $image_id;
+	public $name;
+	public $filename;
+	public $gallery_id;
+	public $user_id;
+	public $created;
 
 	/**
 	 * Name of DB table's primary key.
@@ -50,7 +55,8 @@ class GalleryImages extends Model {
 	public function labels(){
 		return [
 			'name' => 'Name',
-			'created' => 'Created'
+			'created' => 'Created',
+			'gallery_id' => 'Gallery'
 		];
 	}
 
@@ -73,12 +79,37 @@ class GalleryImages extends Model {
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */
 	public function beforeSave(){
+		// Set image upload date.
+		if($this->isCreate()){
+			$this->created = date('Y-m-d H:i:s', strtotime("now"));
+		}
 	}
 
 	/**
-	 * Post-save operations. If model successfully inserted or updated, this action runs.
+	 * Post-find operations. Runs after a select query has been executed. Called for each item in the result.
+	 *
+	 * @param array $result The result array of a fetch operation.
 	 */
-	public function afterSave(){
+	public function afterFind(&$result){
+		// If result set is empty, do nothing.
+		if(empty($result)) return;
+		$galleryModel = new Gallery();
+		$gallery = $galleryModel->findOne($result['gallery_id']);
+		$result['galleryName'] = $gallery['name'];
+		$result['fullPath'] = $gallery['filepath'] . '/' . $result['filename'];
+	}
+
+	/**
+	 * Creates a unique image name.
+	 */
+	public function createName($size = 48){
+		$string = 'abcdefghijklmnopqrstuvwxyz1234567890';
+		$length = strlen($string) - 1;
+		$name = '';
+		for($i = 0; $i < $size; $i++){
+			$name .= substr($string, random_int(0, $length), 1);
+		}
+		return $name;
 	}
 }
 ?>

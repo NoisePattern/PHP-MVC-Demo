@@ -38,9 +38,15 @@
 					<li class="nav-item dropdown px-3">
 						<a class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" href="#">GALLERIES</a>
 						<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-						<?php if(Auth::authorize('admin', Application::$app->controller->permissions())){ ?>
+							<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/index'; ?>">Browse galleries</a></li>
+							<?php if(Session::isLogged()){ ?>
+							<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/myimages'; ?>">My images</a></li>
+							<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/imageadd'; ?>">Upload image</a></li>
+							<?php } ?>
+							<?php if(Auth::authorize('admin', Application::$app->controller->permissions())){ ?>
 								<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/galleryadmin'; ?>">Gallery management</a></li>
-						<?php } ?>
+								<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/imageadmin'; ?>">Image management</a></li>
+							<?php } ?>
 						</ul>
 					</li>
 					<?php if(Session::isLogged()){ ?>
