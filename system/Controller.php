@@ -15,11 +15,10 @@ class Controller {
 		}
 	}
 
+	/**
+	 * Array of model names used by the controller.
+	 */
 	public function useModels(){
-		return [];
-	}
-
-	public function permissions(){
 		return [];
 	}
 

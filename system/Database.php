@@ -12,7 +12,7 @@ abstract class Database {
 	 * @return object Returns DB connection details.
 	 */
 	public static function dbConnect(){
-		// If there is no conenction yet, establish connection.
+		// If there is no connection yet, establish connection.
 		if(is_null(self::$db)){
 			$query = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME;
 			$options = [

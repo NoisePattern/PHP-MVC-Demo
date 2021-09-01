@@ -63,16 +63,18 @@ class LoginForm extends Model {
 		];
 	}
 
+	public function relations(){
+		return [];
+	}
+
 	public function login(){
-		$user = $this->findOne(['username' => $this->username]);
-		if(!$user || !password_verify($this->password, $user['password'])){
+		$user = new User();
+		$data = $user->findOne(['username' => $this->username], [], PDO::FETCH_OBJ);
+		if(!$data || !password_verify($this->password, $data->password)){
 			return false;
 		} else {
-			Session::setKey([
-				'user_id' => $user['user_id'],
-				'username' => $user['username'],
-				'level' => $user['level']
-			]);
+			$user->values($data);
+			Session::login($user);
 			return true;
 		}
 	}

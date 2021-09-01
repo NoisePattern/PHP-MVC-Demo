@@ -1,6 +1,6 @@
 <?php
 
-class Article extends Model {
+class RbacPermission extends Model {
 
 	/**
 	 * Name of the associated table in DB.
@@ -8,19 +8,15 @@ class Article extends Model {
 	 * @return string Returns table name.
 	 */
 	public function tableName(){
-		return 'articles';
+		return 'rbac_permissions';
 	}
 
 	/**
 	 * Model variables, one for each DB table field, plus any other fields the form returns (but will not save to DB).
 	 */
-	public $article_id;
-	public $user_id;
-	public $caption;
-	public $content;
-	public $published;
-	public $created;
-	public $updated;
+	public $permission_id;
+	public $permission_name;
+	public $permission_description;
 
 	/**
 	 * Name of DB table's primary key.
@@ -28,7 +24,7 @@ class Article extends Model {
 	 * @return string Name of primary key.
 	 */
 	public function getPrimaryKey(){
-		return 'article_id';
+		return 'permission_id';
 	}
 
 	/**
@@ -38,12 +34,9 @@ class Article extends Model {
 	 */
 	public function fields(){
 		return [
-			'user_id',
-			'caption',
-			'content',
-			'published',
-			'created',
-			'updated'
+			'permission_id',
+			'permission_name',
+			'permission_description'
 		];
 	}
 
@@ -55,12 +48,8 @@ class Article extends Model {
 	 */
 	public function labels(){
 		return [
-			'user_id' => 'Writer',
-			'caption' => 'Article name',
-			'content' => 'Content',
-			'published' => 'Published',
-			'created' => 'Created',
-			'updated' => 'Updated'
+			'permission_name' => 'Permission name',
+			'permission_description' => 'Permission description'
 		];
 	}
 
@@ -71,17 +60,15 @@ class Article extends Model {
 	 */
 	public function rules(){
 		return [
-			'user_id' => ['required', ['on', 'action' => 'create']],
-			'caption' => ['required', ['length', 'max' => 200]],
-			'content' => ['required'],
-			'created' => [['on', 'action' => 'create']],
-			'updated' => [['on', 'action' => 'update']]
+			'permission_name' => ['required'],
+			'permission_description' => ['required']
 		];
 	}
 
 	public function relations(){
 		return [
-			'owner' => ['belongsTo', 'User', 'user_id']
+			'roles' => ['manyToMany', 'RbacRole', 'RbacRolePermission', 'permission_id', 'role_id'],
+			'rules' => ['manyToMany', 'RbacRule', 'RbacPermissionRule', 'permission_id', 'rule_id']
 		];
 	}
 
@@ -89,20 +76,12 @@ class Article extends Model {
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */
 	public function beforeSave(){
-		// When article is created, set create date.
-		if($this->isCreate()){
-			$this->created = date('Y-m-d H:i:s', strtotime("now"));
-		}
-		// When article is updated, set update date.
-		else if($this->isUpdate()){
-			$this->updated = date('Y-m-d H:i:s', strtotime("now"));
-		}
 	}
 
-	public function afterFind(&$result){
-		$userModel = new User();
-		$thisUser = $userModel->findOne($result['user_id']);
-		$result['author'] = $thisUser['username'];
+	/**
+	 * Post-save operations. If model successfully inserted or updated, this action runs.
+	 */
+	public function afterSave(){
 	}
 }
 ?>

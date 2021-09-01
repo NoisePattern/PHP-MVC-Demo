@@ -1,6 +1,6 @@
 <?php
 
-class Article extends Model {
+class RbacPermissionRule extends Model {
 
 	/**
 	 * Name of the associated table in DB.
@@ -8,19 +8,15 @@ class Article extends Model {
 	 * @return string Returns table name.
 	 */
 	public function tableName(){
-		return 'articles';
+		return 'rbac_permissions_rules';
 	}
 
 	/**
 	 * Model variables, one for each DB table field, plus any other fields the form returns (but will not save to DB).
 	 */
-	public $article_id;
-	public $user_id;
-	public $caption;
-	public $content;
-	public $published;
-	public $created;
-	public $updated;
+	public $pr_id;
+	public $permission_id;
+	public $rule_id;
 
 	/**
 	 * Name of DB table's primary key.
@@ -28,7 +24,7 @@ class Article extends Model {
 	 * @return string Name of primary key.
 	 */
 	public function getPrimaryKey(){
-		return 'article_id';
+		return 'pr_id';
 	}
 
 	/**
@@ -37,14 +33,7 @@ class Article extends Model {
 	 * @return array Returns an array containing DB field names.
 	 */
 	public function fields(){
-		return [
-			'user_id',
-			'caption',
-			'content',
-			'published',
-			'created',
-			'updated'
-		];
+		return [];
 	}
 
 	/**
@@ -54,14 +43,7 @@ class Article extends Model {
 	 * @return array Returns an associative array containing displayable names for model variables.
 	 */
 	public function labels(){
-		return [
-			'user_id' => 'Writer',
-			'caption' => 'Article name',
-			'content' => 'Content',
-			'published' => 'Published',
-			'created' => 'Created',
-			'updated' => 'Updated'
-		];
+		return [];
 	}
 
 	/**
@@ -70,39 +52,28 @@ class Article extends Model {
 	 * @return array Returns an associative array containing validation rules.
 	 */
 	public function rules(){
-		return [
-			'user_id' => ['required', ['on', 'action' => 'create']],
-			'caption' => ['required', ['length', 'max' => 200]],
-			'content' => ['required'],
-			'created' => [['on', 'action' => 'create']],
-			'updated' => [['on', 'action' => 'update']]
-		];
+		return [];
 	}
 
+	/**
+	 * Table's foreign key relations. An array where each key is name of the field and value is an array where related table is first and field second.
+	 *
+	 * @return array Returns array of foreign key relations.
+	 */
 	public function relations(){
-		return [
-			'owner' => ['belongsTo', 'User', 'user_id']
-		];
+		return [];
 	}
 
 	/**
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */
 	public function beforeSave(){
-		// When article is created, set create date.
-		if($this->isCreate()){
-			$this->created = date('Y-m-d H:i:s', strtotime("now"));
-		}
-		// When article is updated, set update date.
-		else if($this->isUpdate()){
-			$this->updated = date('Y-m-d H:i:s', strtotime("now"));
-		}
 	}
 
-	public function afterFind(&$result){
-		$userModel = new User();
-		$thisUser = $userModel->findOne($result['user_id']);
-		$result['author'] = $thisUser['username'];
+	/**
+	 * Post-save operations. If model successfully inserted or updated, this action runs.
+	 */
+	public function afterSave(){
 	}
 }
 ?>

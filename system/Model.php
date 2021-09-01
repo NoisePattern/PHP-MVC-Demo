@@ -2,7 +2,7 @@
 
 abstract class Model {
 	protected $db;
-	protected $errors = [];
+	public $errors = [];
 	protected $ignoreFields = [];
 
 	public function __construct(){
@@ -44,6 +44,13 @@ abstract class Model {
 	 * @return array Returns an associative array containing validation rules.
 	 */
 	abstract function rules();
+
+	/**
+	 * Table's foreign key relations. Array contains arrays where each value in order represents: relation type, related class, and foreign key.
+	 *
+	 * @return array Returns array of foreign key relations.
+	 */
+	abstract function relations();
 
 	/**
 	 * Sets model's data to given values. Model value is set only if a variable with same name as array's key exists.
@@ -355,19 +362,23 @@ abstract class Model {
 	 * - If a single value: value is treated as primary key search value.
 	 * - If an array: each key is treated as column to search on and the value as the value to search for. Multiple array entries are connected
 	 * with an AND statement. If the value is an array, it will be turned into an IN() statement for all of its values.
+	 * @param array $params Additional query params array. Supports:
+	 * - orderBy: an array where first entry is the column name to order by, and second value is direction, either ASC or DESC string.
+	 * - join: name of the relation to join to query.
 	 * @param int $mode The mode in which PDO should return the findOne result. Defaults to PDO::FETCH_ASSOC.
 	 * @return object The query result as object, limited to one entry with LIMIT 1.
 	 */
 	public function findOne($condition = [], $params = [], $mode = PDO::FETCH_ASSOC){
 		$this->beforeFind();
 		$tableName = $this->tableName();
+		$tables = $tableName;
 		$sql = '';
 		$bindValues = [];
 
 		if(is_array($condition)){
 			foreach($condition as $key => $value){
 				if(is_array($value)){
-					$sql .= $key . ' IN (';
+					$sql .= $tableName . '.' . $key . ' IN (';
 					foreach($value as $inKey => $inValue){
 						$sql .= ':' . $key . $inKey;
 						if($inKey !== array_key_last($value)) $sql .= ', ';
@@ -375,14 +386,14 @@ abstract class Model {
 					}
 					$sql .= ') ';
 				} else {
-					$sql .= $key . ' = :' . $key . ' ';
+					$sql .= $tableName . '.' . $key . ' = :' . $key . ' ';
 					$bindValues[':' . $key] = $value;
 				}
 				if($key !== array_key_last($condition)) $sql .= 'AND ';
 			}
 		} else {
 			$primary = $this->getPrimaryKey();
-			$sql = $primary . ' = :' . $primary . ' ';
+			$sql = $tableName . '.' . $primary . ' = :' . $primary . ' ';
 			$bindValues[':' . $primary] = $condition;
 		}
 
@@ -397,7 +408,25 @@ abstract class Model {
 			}
 		}
 
-		$statement = $this->db->prepare('SELECT * FROM ' . $tableName . ' WHERE ' . $sql . ' LIMIT 1');
+		// Join related table.
+		if(array_key_exists('join', $params)){
+			$relation = $this->relations()[$params['join']];
+			// Many-to-many relation between tables.
+			if($relation[0] == 'manyToMany'){
+				// Get relation table models and instantiate.
+				require_once(APPROOT . 'models/' . $relation[1] . '.php');
+				$relatedTable = new $relation[1];
+				require_once(APPROOT . 'models/' . $relation[2] . '.php');
+				// Get tale names and build inner joins.
+				$joinTable = new $relation[2];
+				$joinTableName = $joinTable->tableName();
+				$relatedTableName = $relatedTable->tableName();
+				$tables .= ' INNER JOIN ' . $joinTableName . ' ON ' . $tableName . '.' . $relation[3] . ' = ' . $joinTableName . '.' . $relation[3];
+				$tables .= ' INNER JOIN ' . $relatedTableName . ' ON ' . $joinTableName . '.' . $relation[4] . ' = ' . $relatedTableName . '.' . $relation[4];
+			}
+		}
+
+		$statement = $this->db->prepare('SELECT * FROM ' . $tables . ' WHERE ' . $sql . ' LIMIT 1');
 		foreach($bindValues as $key => $value){
 			$this->binder($statement, $key, $value);
 		}
@@ -421,12 +450,14 @@ abstract class Model {
 	 * - orderBy: an array where first entry is the column name to order by, and second value is direction, either ASC or DESC string.
 	 * - limit: The limit value.
 	 * - offset: The offset value.
+	 * - join: name of the relation to join to query.
 	 * @param int $mode The mode in which PDO should return the fetchAll result. Defaults to PDO::FETCH_ASSOC.
 	 * @return array Returns a result set.
 	 */
 	public function findAll($condition = [], $params = [], $mode = PDO::FETCH_ASSOC){
 		$this->beforeFind();
 		$tableName = $this->tableName();
+		$tables = $tableName;
 		$sql = '';
 		$bindValues = [];
 
@@ -434,7 +465,7 @@ abstract class Model {
 			$sql .= ' WHERE ';
 			foreach($condition as $key => $value){
 				if(is_array($value)){
-					$sql .= $key . ' IN (';
+					$sql .= $tableName . '.' . $key . ' IN (';
 					foreach($value as $inKey => $inValue){
 						$sql .= ':' . $key . $inKey;
 						if($inKey !== array_key_last($value)) $sql .= ', ';
@@ -442,7 +473,7 @@ abstract class Model {
 					}
 					$sql .= ') ';
 				} else {
-					$sql .= $key . ' = :' . $key . ' ';
+					$sql .= $tableName . '.' . $key . ' = :' . $key . ' ';
 					$bindValues[':' . $key] = $value;
 				}
 				if($key !== array_key_last($condition)) $sql .= 'AND ';
@@ -470,7 +501,25 @@ abstract class Model {
 			}
 		}
 
-		$statement = $this->db->prepare('SELECT * FROM ' . $tableName . $sql);
+		// Join related table.
+		if(array_key_exists('join', $params)){
+			$relation = $this->relations()[$params['join']];
+			// Many-to-many relation between tables.
+			if($relation[0] == 'manyToMany'){
+				// Get relation table models and instantiate.
+				require_once(APPROOT . 'models/' . $relation[1] . '.php');
+				$relatedTable = new $relation[1];
+				require_once(APPROOT . 'models/' . $relation[2] . '.php');
+				// Get tale names and build inner joins.
+				$joinTable = new $relation[2];
+				$joinTableName = $joinTable->tableName();
+				$relatedTableName = $relatedTable->tableName();
+				$tables .= ' INNER JOIN ' . $joinTableName . ' ON ' . $tableName . '.' . $relation[3] . ' = ' . $joinTableName . '.' . $relation[3];
+				$tables .= ' INNER JOIN ' . $relatedTableName . ' ON ' . $joinTableName . '.' . $relation[4] . ' = ' . $relatedTableName . '.' . $relation[4];
+			}
+		}
+
+		$statement = $this->db->prepare('SELECT * FROM ' . $tables . $sql);
 		foreach($bindValues as $key => $value){
 			$this->binder($statement, $key, $value);
 		}

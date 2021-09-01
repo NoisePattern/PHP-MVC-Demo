@@ -71,6 +71,12 @@ class Gallery extends Model {
 		];
 	}
 
+	public function relations(){
+		return [
+			'galleryParent' => ['belongsTo', 'Gallery', 'parent_id'],
+			'galleryChildren' => ['hasMany', 'Gallery', 'gallery_id']
+		];
+	}
 	/**
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */

@@ -12,29 +12,6 @@ class Articles extends Controller {
 	}
 
 	/**
-	 * Define an array of authorization permissions.
-	 */
-	public function permissions(){
-		return [
-			'admin' => [
-				'setting' => ['level' => [2]]
-			],
-			'myarticles' => [
-				'login' => true
-			],
-			'write' => [
-				'login' => true
-			],
-			'edit' => [
-				'login' => true
-			],
-			'delete' => [
-				'login' => true
-			]
-		];
-	}
-
-	/**
 	 * Browse articles.
 	 */
 	public function index(){
@@ -61,6 +38,12 @@ class Articles extends Controller {
 	 * Admin view of articles.
 	 */
 	public function admin(){
+		// Check permission.
+		if(!Auth::checkUserPermission('manageArticles')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$selectedUser = 0;			// Selected user.
 		$pageSize = 10;				// Number of articles per page.
 		$page = 0;					// Current page.
@@ -110,11 +93,11 @@ class Articles extends Controller {
 	public function article(){
 		$articleModel = new Article();
 		$data = Application::$app->request->get();
-		$article = $articleModel->findOne($data['article_id'], PDO::FETCH_OBJ);
+		$article = $articleModel->findOne($data['article_id']);
 		if($article){
 			$userModel = new User();
-			$user = $userModel->findOne($article->user_id);
-			$article->author = $user['username'];
+			$user = $userModel->findOne($article['user_id']);
+			$article['author'] = $user['username'];
 			$this->view('article', ['article' => $article]);
 		} else {
 			Application::$app->request->redirect('articles', 'index');
@@ -125,6 +108,12 @@ class Articles extends Controller {
 	 * List of user's articles.
 	 */
 	public function myarticles(){
+		// Check permission.
+		if(!Auth::checkUserPermission('manageOwnArticles')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$pageSize = 10;				// Number of articles per page.
 		$page = 0;					// Current page.
 
@@ -134,10 +123,10 @@ class Articles extends Controller {
 			if(isset($data['page'])) $page = $data['page'];
 		}
 		$articleModel = new Article();
-		$articles = $articleModel->findAll(['user_id' => Session::getKey('user_id')], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'DESC']]);
+		$articles = $articleModel->findAll(['user_id' => Application::$app->user->user_id], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['created', 'DESC']]);
 
 		// Get total number of articles by user (or all users).
-		$total = $articleModel->count(['user_id' => Session::getKey('user_id')]);
+		$total = $articleModel->count(['user_id' => Application::$app->user->user_id]);
 
 		$this->view('myarticles', ['model' => $articleModel, 'articles' => $articles, 'pageSize' => $pageSize, 'page' => $page, 'total' => $total]);
 	}
@@ -146,17 +135,28 @@ class Articles extends Controller {
 	 * Write new article.
 	 */
 	public function write(){
+		// Check permission.
+		if(!Auth::checkUserPermission('writeArticles')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$articleModel = new Article();
 		if(Application::$app->request->isPost()){
-			$articleModel->values(Application::$app->request->post());
-			if($articleModel->validate()){
-				if($articleModel->save()){
-					SESSION::setFlash('success', 'Article saved.');
-					Application::$app->request->redirect('articles', 'myarticles');
-					exit;
-				} else {
-					SESSION::setFlash('error', 'Could not save article.');
-					Application::$app->request->redirect('articles', 'myarticles');
+			// Check permission.
+			if(!Auth::checkUserPermission('writeArticles')){
+				Session::setFlashRender('error', 'You do not have permission for that.');
+			} else {
+				$articleModel->values(Application::$app->request->post());
+				if($articleModel->validate()){
+					if($articleModel->save()){
+						SESSION::setFlash('success', 'Article saved.');
+						Application::$app->request->redirect('articles', 'myarticles');
+						exit;
+					} else {
+						SESSION::setFlash('error', 'Could not save article.');
+						Application::$app->request->redirect('articles', 'myarticles');
+					}
 				}
 			}
 		}
@@ -174,8 +174,19 @@ class Articles extends Controller {
 			Session::setKey(['senderController' => $sender['controller'], 'senderAction' => $sender['action']]);
 		}
 		$articleModel = new Article();
+		// If edited article was sent in post data.
 		if(Application::$app->request->isPost()){
-			$articleModel->values(Application::$app->request->post());
+			$data = Application::$app->request->post();
+			$articleModel->values($articleModel->findOne(['article_id' => $data['article_id']]));
+			// Check permission: to edit all articles, or to edit own articles and current article is own.
+			if(!Auth::checkUserPermission('updateAllArticles') && !Auth::checkUserPermission('updateOwnArticles', $articleModel)){
+				Session::setFlash('error', 'You do not have the permission to do that.');
+				Application::$app->request->redirect(Session::getKey('senderController'), Session::getKey('senderAction'));
+				Session::unsetKey(['senderController', 'senderAction']);
+				exit;
+			}
+			// Update article with post data.
+			$articleModel->values($data);
 			if($articleModel->validate()){
 				if($articleModel->save()){
 					Session::setFlash('success', 'Article updated.');
@@ -192,10 +203,19 @@ class Articles extends Controller {
 					exit;
 				}
 			}
-		} else {
+		}
+		// If article is opened for editing through a link.
+		else {
 			$data = Application::$app->request->get();
 			$article = $articleModel->findOne($data['article_id']);
 			$articleModel->values($article);
+			// Check permission: to edit all articles, or to edit own articles and current articles is owned.
+			if(!Auth::checkUserPermission('updateAllArticles') && !Auth::checkUserPermission('updateOwnArticles', $articleModel)){
+				Session::setFlash('error', 'You do not have the permission to do that.');
+				Application::$app->request->redirect(Session::getKey('senderController'), Session::getKey('senderAction'));
+				Session::unsetKey(['senderController', 'senderAction']);
+				exit;
+			}
 		}
 		$this->view('edit', ['model' => $articleModel, 'useEditor' => true]);
 	}
@@ -206,17 +226,26 @@ class Articles extends Controller {
 	public function delete(){
 		// Multiple pages can send to delete action, redirect must send back to correct page.
 		$sender = Application::$app->request->getReferer();
+
 		$options = [];
 		if(Application::$app->request->isGet()){
-			$data = Application::$app->request->get();
+			$requestData = Application::$app->request->get();
+			// Fetch article requested for deletion.
 			$articleModel = new Article();
-			if($articleModel->delete($data['article_id'])){
-				Session::setFlash('success', 'Article deleted.');
+			$data = $articleModel->findOne(['article_id' => $requestData['article_id']]);
+			$articleModel->values($data);
+			// Check permission: to delete all articles, or to delete own articles and current article is own.
+			if(Auth::checkUserPermission('deleteAllArticles') || Auth::checkUserPermission('deleteOwnArticles', $articleModel)){
+				if($articleModel->delete($requestData['article_id'])){
+					Session::setFlash('success', 'Article deleted.');
+				} else {
+					Session::setFlash('error', 'Could not delete article.');
+				}
 			} else {
-				Session::setFlash('error', 'Could not delete article.');
+				Session::setFlash('error', 'You do not have permission to do that.');
 			}
 			// If link contained user selection data, forward it to redirected page.
-			if(isset($data['selectedUser'])) $options['selectedUser'] = $data['selectedUser'];
+			if(isset($requestData['selectedUser'])) $options['selectedUser'] = $requestData['selectedUser'];
 		}
 		if($sender){
 			Application::$app->request->redirect($sender['controller'], $sender['action'], $options);

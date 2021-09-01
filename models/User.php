@@ -17,7 +17,7 @@ class User extends Model {
 	public $user_id;
 	public $username;
 	public $email;
-	public $level;
+	public $role_id;
 	public $password;
 	public $confirmPassword;
 	public $created;
@@ -41,7 +41,7 @@ class User extends Model {
 		return [
 			'username',
 			'email',
-			'level',
+			'role_id',
 			'password',
 			'created',
 			'updated'
@@ -58,9 +58,7 @@ class User extends Model {
 		return [
 			'username' => 'Username',
 			'email' => 'Email',
-			'code' => 'Code',
-			'custom' => 'Custom Field',
-			'level' => 'User level',
+			'role_id' => 'User role',
 			'password' => 'Password',
 			'confirmPassword' => 'Password Confirm',
 			'created' => 'Created',
@@ -77,10 +75,19 @@ class User extends Model {
 		return [
 			'username' => ['required', 'unique', ['length' , 'max' => 255]],
 			'email' => ['required', 'unique', 'email'],
+			'role_id' => ['required'],
 			'password' => ['required', ['length', 'min' => 5]],
 			'confirmPassword' => ['required', ['compare', 'field' => 'password']],
 			'created' => [['on', 'action' => 'create']],
 			'updated' => [['on', 'action' => 'update']]
+		];
+	}
+
+	public function relations(){
+		return [
+			'ownArticles' => ['hasMany', 'Article', 'article_id'],
+			'ownImages' => ['hasMany', 'GalleryImage', 'image_id'],
+			'role' => ['hasOne', 'RbacRole', 'role_id']
 		];
 	}
 
@@ -90,8 +97,6 @@ class User extends Model {
 	public function beforeSave(){
 		// Hash the password.
 		$this->password = password_hash($this->password, PASSWORD_DEFAULT);
-		// For now, just set user's level to 1.
-		$this->level = 1;
 		// When user is created, set create date.
 		if($this->isCreate()){
 			$this->created = date('Y-m-d H:i:s', strtotime("now"));

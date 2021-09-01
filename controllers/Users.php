@@ -60,12 +60,16 @@ class Users extends Controller {
 		$userModel = new User();
 		if(Application::$app->request->isPost()){
 			$userModel->values(Application::$app->request->post());
+			// For now, just set role of all registered users to 1 (standard user).
+			$userModel->role_id = 1;
 			if($userModel->validate()){
 				if($userModel->save()){
 					SESSION::setFlash('success', 'Registration successful.');
 					Application::$app->request->redirect('users', 'login');
 					exit;
 				}
+			} else {
+				var_dump($userModel->errors);
 			}
 		}
 		$this->view('register', ['model' => $userModel]);

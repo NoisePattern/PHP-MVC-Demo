@@ -26,11 +26,11 @@
 						<a class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" href="#">ARTICLES</a>
 						<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
 							<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/index'; ?>">Browse articles</a></li>
-							<?php if(Session::isLogged()){ ?>
-							<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/myarticles'; ?>">My articles</a></li>
-							<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/write'; ?>">Write article</a></li>
-							<?php } ?>
-							<?php if(Auth::authorize('admin', Application::$app->controller->permissions())){ ?>
+							<?php if(Auth::checkUserPermission('manageOwnArticles')){ ?>
+								<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/myarticles'; ?>">My articles</a></li>
+							<?php } if(Auth::checkUserPermission('writeArticles')){ ?>
+								<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/write'; ?>">Write article</a></li>
+							<?php } if(Auth::checkUserPermission('manageArticles')){ ?>
 								<li><a class="dropdown-item" href="<?php echo URLROOT . '/articles/admin'; ?>">Article management</a></li>
 							<?php } ?>
 						</ul>
@@ -39,12 +39,13 @@
 						<a class="nav-link dropdown-toggle" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" href="#">GALLERIES</a>
 						<ul class="dropdown-menu" aria-labelledby="navbarDropdown">
 							<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/index'; ?>">Browse galleries</a></li>
-							<?php if(Session::isLogged()){ ?>
-							<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/myimages'; ?>">My images</a></li>
+							<?php if(Auth::checkUserPermission('manageOwnImages')){ ?>
+								<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/myimages'; ?>">My images</a></li>
+							<?php } if(Auth::checkUserPermission('addImages')){ ?>
 							<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/imageadd'; ?>">Upload image</a></li>
-							<?php } ?>
-							<?php if(Auth::authorize('admin', Application::$app->controller->permissions())){ ?>
+							<?php } if(Auth::checkUserPermission('manageGalleries')){ ?>
 								<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/galleryadmin'; ?>">Gallery management</a></li>
+							<?php } if(Auth::checkUserPermission('manageAllImages')){ ?>
 								<li><a class="dropdown-item" href="<?php echo URLROOT . '/galleries/imageadmin'; ?>">Image management</a></li>
 							<?php } ?>
 						</ul>

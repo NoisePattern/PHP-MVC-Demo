@@ -60,6 +60,15 @@ class Foo extends Model {
 	}
 
 	/**
+	 * Table's foreign key relations. An array where each key is name of the field and value is an array where related table is first and field second.
+	 *
+	 * @return array Returns array of foreign key relations.
+	 */
+	public function relations(){
+		return [];
+	}
+
+	/**
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */
 	public function beforeSave(){

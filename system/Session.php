@@ -1,6 +1,6 @@
 <?php
 
-class Session {
+abstract class Session {
 
 	/**
 	 * Starts session and handles queued flash messages.
@@ -12,16 +12,31 @@ class Session {
 		$_SESSION['flashMessageQueue'] = [];
 	}
 
+
 	/**
-	 * Check login state.
+	 * Adds logged in user to session. Called from code that handles user login after a successful
+	 * login attempt has been made.
+	 *
+	 * @param object $user Instance of user model class, filled with logged in user's data.
+	 */
+	public static function login($user){
+		// Save user model's name to session.
+		Session::setKey(['userModel' => get_class($user)]);
+		// Get model's user identifying primary key name.
+		$primaryKey = $user->getPrimaryKey();
+		// Save user identifier value to session.
+		Session::setKey(['userId' => $user->{$primaryKey}]);
+	}
+
+	/**
+	 * Check login state. A user is logged in if 'userId' is set to session data.
 	 */
 	public static function isLogged(){
-		if(isset($_SESSION['user_id'])){
+		if(Session::checkKey('userId')){
 			return true;
 		} else {
 			return false;
 		}
-
 	}
 
 	/**

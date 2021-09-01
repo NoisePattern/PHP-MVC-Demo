@@ -75,6 +75,12 @@ class Galleries extends Controller {
 	 * Manage galleries.
 	 */
 	public function galleryadmin(){
+		// Check permission.
+		if(!Auth::checkUserPermission('manageGalleries')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$selectedGallery = null;					// Gallery selection dropdown's current selection.
 		$galleryModel = new Gallery();
 
@@ -124,6 +130,12 @@ class Galleries extends Controller {
 	 * Manage images in gallery.
 	 */
 	public function imageadmin(){
+		// Check permission.
+		if(!Auth::checkUserPermission('manageAllImages')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$pageSize = 10;
 		$page = 0;
 		$total = 0;
@@ -178,6 +190,12 @@ class Galleries extends Controller {
 	 * User's image management.
 	 */
 	public function myimages(){
+		// Check permission.
+		if(!Auth::checkUserPermission('manageOwnImages')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$pageSize = 10;
 		$page = 0;
 
@@ -190,8 +208,8 @@ class Galleries extends Controller {
 
 		// Get all images of current user.
 		$imageModel = new GalleryImage();
-		$images = $imageModel->findAll(['user_id' => Session::getKey('user_id')], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['name', 'asc']]);
-		$total = $imageModel->count(['user_id' => Session::getKey('user_id')]);
+		$images = $imageModel->findAll(['user_id' => Application::$app->user->user_id], ['limit' => $pageSize, 'offset' => $page * $pageSize, 'orderBy' => ['name', 'asc']]);
+		$total = $imageModel->count(['user_id' => Application::$app->user->user_id]);
 
 		$this->view('myimages', [
 			'imageModel' => $imageModel,
@@ -206,6 +224,13 @@ class Galleries extends Controller {
 	 * Add new gallery.
 	 */
 	public function galleryadd(){
+		// Check permission.
+		if(!Auth::checkUserPermission('addGalleries')){
+			Session::setFlash('error', 'You do not have permission to do that.');
+			Application::$app->request->redirect('galleries', 'galleryadmin');
+			exit;
+		}
+
 		$galleryModel = new Gallery();
 
 		if(Application::$app->request->isPost()){
@@ -233,6 +258,13 @@ class Galleries extends Controller {
 	 * Remove gallery.
 	 */
 	public function gallerydelete(){
+		// Check permission.
+		if(!Auth::checkUserPermission('deleteGalleries')){
+			Session::setFlash('error', 'You do not have permission to do that.');
+			Application::$app->request->redirect('galleries', 'galleryadmin');
+			exit;
+		}
+
 		if(Application::$app->request->isGet()){
 			$data = Application::$app->request->get();
 			$this->recursiveDelete($data['gallery_id']);
@@ -274,6 +306,12 @@ class Galleries extends Controller {
 	 * Add image to gallery.
 	 */
 	public function imageadd(){
+		// Check permission.
+		if(!Auth::checkUserPermission('addImages')){
+			Application::$app->request->redirect('users', 'login');
+			exit;
+		}
+
 		$galleryModel = new Gallery();
 		$imageModel = new GalleryImage();
 
@@ -317,13 +355,19 @@ class Galleries extends Controller {
 			$data = Application::$app->request->get();
 			$imageModel = new GalleryImage();
 			$image = $imageModel->findOne($data['image_id']);
-			$galleryModel = new Gallery();
-			$gallery = $galleryModel->findOne($image['gallery_id']);
-			// Remove database entry.
-			if($this->deleteOneImage($image, $imageModel, $gallery)){
-				Session::setFlash('success', 'Image has been removed.');
+			$imageModel->values($image);
+			// Check permission: to delete all images, or to delet own images and current image is own.
+			if(Auth::checkUserPermission('deleteAllImages') || Auth::checkUserPermission('deleteOwnImages', $imageModel)){
+				$galleryModel = new Gallery();
+				$gallery = $galleryModel->findOne($image['gallery_id']);
+				// Remove database entry.
+				if($this->deleteOneImage($image, $imageModel, $gallery)){
+					Session::setFlash('success', 'Image has been removed.');
+				} else {
+					Session::setFlash('error' , 'Image could not be removed');
+				}
 			} else {
-				Session::setFlash('error' , 'Image could not be removed');
+				Session::setFlash('error', 'You do not have permission to do that.');
 			}
 			// If link contained gallery selection data, forward it to redirected page.
 			if(isset($data['selectedGallery'])) $options['selectedGallery'] = $data['selectedGallery'];

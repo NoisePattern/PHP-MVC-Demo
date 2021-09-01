@@ -75,6 +75,12 @@ class GalleryImage extends Model {
 		];
 	}
 
+	public function relations(){
+		return [
+			'gallery' => ['belongsTo', 'Gallery', 'gallery_id'],
+			'owner' => ['belongsTo', 'User', 'user_id']
+		];
+	}
 	/**
 	 * Pre-save operations. If model data passes validation, this action runs before DB insert or update.
 	 */
